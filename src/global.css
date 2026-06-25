@@ -1,3 +1,28 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.airconnect-shell {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 :root {
   --font-display:
     Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,

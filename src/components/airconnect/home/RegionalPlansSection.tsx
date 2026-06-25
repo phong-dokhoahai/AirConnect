@@ -1,0 +1,47 @@
+import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, Text, View } from "react-native";
+
+import { SectionHeader } from "./SectionHeader";
+import type { RegionalPlan } from "./types";
+
+export function RegionalPlansSection({ plans }: { plans: RegionalPlan[] }) {
+  return (
+    <View className="px-6 mt-6">
+      <SectionHeader title="Regional Plans" />
+
+      <View className="flex-row flex-wrap justify-between gap-y-3">
+        {plans.map((item) => (
+          <Pressable
+            key={item.id}
+            style={{ width: "48%" }}
+            className="bg-white rounded-3xl p-4 border border-[#F3F4F6]"
+          >
+            <LinearGradient
+              colors={item.colors}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+            </LinearGradient>
+
+            <Text className="font-semibold text-[#111827]">{item.name}</Text>
+
+            <Text className="text-xs text-[#6B7280] mt-1">
+              {item.countries} countries
+            </Text>
+
+            <Text className="text-[#7B61FF] mt-2 font-medium">
+              From {item.price}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
