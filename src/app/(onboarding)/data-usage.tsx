@@ -3,6 +3,8 @@ import { Infinity, Smartphone, Video, Wifi } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { BackButton } from "@/components/airconnect/ui";
+
 type IconComponent = React.ComponentType<{
   size?: number;
   color?: string;
@@ -69,6 +71,10 @@ export default function DataUsageRoute() {
 
   return (
     <View className="flex-1 bg-white">
+      <View className="absolute left-6 top-14 z-10">
+        <BackButton />
+      </View>
+
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-6 pt-16 pb-8"

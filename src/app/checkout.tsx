@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Check,
@@ -24,6 +24,8 @@ import {
   View,
 } from "react-native";
 
+import { plans } from "@/constants/airconnect";
+
 const paymentMethods = [
   { id: "card", label: "Credit / Debit Card", icon: CreditCard },
   { id: "apple-pay", label: "Apple Pay", icon: Smartphone },
@@ -45,14 +47,21 @@ const benefits = [
   { icon: Phone, label: "Keep Your Existing Number" },
 ];
 
+function parsePrice(price: string) {
+  const value = Number.parseFloat(price.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(value) ? value : 0;
+}
+
 export default function CheckoutRoute() {
+  const { planId = "1" } = useLocalSearchParams<{ planId?: string }>();
+  const plan = plans.find((item) => item.id === planId) ?? plans[0];
   const [selectedPayment, setSelectedPayment] = useState("card");
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
 
-  const planPrice = 8.99;
+  const planPrice = parsePrice(plan.price);
   const discount = appliedPromo ? 2.0 : 0;
   const taxes = 0.5;
   const total = planPrice - discount + taxes;
@@ -71,7 +80,10 @@ export default function CheckoutRoute() {
       return;
     }
 
-    Alert.alert("Processing payment...");
+    router.replace({
+      pathname: "/success",
+      params: { planId: plan.id, email },
+    });
   };
 
   return (
@@ -109,11 +121,11 @@ export default function CheckoutRoute() {
 
               <View className="flex-1">
                 <Text className="mb-1 text-xl font-semibold text-white">
-                  Japan eSIM
+                  {plan.country} eSIM
                 </Text>
 
                 <Text className="text-sm text-white/90">
-                  10GB • 15 Days • 5G
+                  {plan.data} - {plan.validity} - {plan.network}
                 </Text>
               </View>
             </View>

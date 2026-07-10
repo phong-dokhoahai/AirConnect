@@ -9,9 +9,8 @@ import {
   Search,
   X,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -20,106 +19,26 @@ import {
   View,
 } from "react-native";
 
+import type {
+  FeaturedPlan,
+  PopularDestination,
+  RegionalPlan,
+} from "@/components/airconnect/home/types";
+import { getCatalogData } from "@/lib/catalogApi";
+
 const recentSearches = ["Japan", "Thailand", "Europe", "South Korea"];
 
-const popularDestinations = [
-  { id: "japan", name: "Japan", flag: "🇯🇵", price: "$8.99" },
-  { id: "south-korea", name: "South Korea", flag: "🇰🇷", price: "$9.99" },
-  { id: "thailand", name: "Thailand", flag: "🇹🇭", price: "$6.99" },
-  { id: "singapore", name: "Singapore", flag: "🇸🇬", price: "$7.99" },
-  { id: "vietnam", name: "Vietnam", flag: "🇻🇳", price: "$5.99" },
-  { id: "united-states", name: "United States", flag: "🇺🇸", price: "$12.99" },
-];
+type CatalogState = {
+  popularDestinations: PopularDestination[];
+  regionalPlans: RegionalPlan[];
+  featuredPlans: FeaturedPlan[];
+};
 
-const regionalPlans = [
-  {
-    id: "asia",
-    name: "Asia",
-    countries: 28,
-    price: "$15.99",
-    icon: "🌏",
-    colors: ["#FB923C", "#EC4899"],
-  },
-  {
-    id: "europe",
-    name: "Europe",
-    countries: 42,
-    price: "$18.99",
-    icon: "🏰",
-    colors: ["#60A5FA", "#8B5CF6"],
-  },
-  {
-    id: "north-america",
-    name: "North America",
-    countries: 12,
-    price: "$14.99",
-    icon: "🗺️",
-    colors: ["#4ADE80", "#14B8A6"],
-  },
-  {
-    id: "middle-east",
-    name: "Middle East",
-    countries: 18,
-    price: "$13.99",
-    icon: "🕌",
-    colors: ["#FBBF24", "#F97316"],
-  },
-  {
-    id: "global",
-    name: "Global",
-    countries: 150,
-    price: "$49.99",
-    icon: "🌍",
-    colors: ["#A78BFA", "#EC4899"],
-  },
-];
-
-const featuredPlans = [
-  {
-    id: "1",
-    flag: "🇯🇵",
-    country: "Japan",
-    data: "10GB",
-    validity: "15 Days",
-    network: "5G",
-    price: "$8.99",
-    originalPrice: "$11.99",
-    savings: "25%",
-  },
-  {
-    id: "2",
-    flag: "🇹🇭",
-    country: "Thailand",
-    data: "8GB",
-    validity: "30 Days",
-    network: "4G/5G",
-    price: "$6.99",
-    originalPrice: "$9.99",
-    savings: "30%",
-  },
-  {
-    id: "3",
-    flag: "🇰🇷",
-    country: "South Korea",
-    data: "15GB",
-    validity: "20 Days",
-    network: "5G",
-    price: "$9.99",
-    originalPrice: "$14.99",
-    savings: "33%",
-  },
-  {
-    id: "4",
-    flag: "🇸🇬",
-    country: "Singapore",
-    data: "12GB",
-    validity: "30 Days",
-    network: "5G",
-    price: "$7.99",
-    originalPrice: "$10.99",
-    savings: "27%",
-  },
-];
+const emptyCatalog: CatalogState = {
+  popularDestinations: [],
+  regionalPlans: [],
+  featuredPlans: [],
+};
 
 export default function ExploreRoute() {
   const router = useRouter();
@@ -130,6 +49,9 @@ export default function ExploreRoute() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [catalog, setCatalog] = useState<CatalogState>(emptyCatalog);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   const removeRecentSearch = (search: string) => {
     setRecentSearchesList((prev) => prev.filter((s) => s !== search));
@@ -142,6 +64,52 @@ export default function ExploreRoute() {
         : [...prev, planId],
     );
   };
+
+  const loadCatalog = useCallback(async () => {
+    setIsCatalogLoading(true);
+    setCatalogError(null);
+
+    const result = await getCatalogData();
+
+    if (result.error) {
+      setCatalog(emptyCatalog);
+      setCatalogError(result.error);
+    } else {
+      setCatalog(result.data ?? emptyCatalog);
+    }
+
+    setIsCatalogLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setIsCatalogLoading(true);
+      setCatalogError(null);
+
+      const result = await getCatalogData();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (result.error) {
+        setCatalog(emptyCatalog);
+        setCatalogError(result.error);
+      } else {
+        setCatalog(result.data ?? emptyCatalog);
+      }
+
+      setIsCatalogLoading(false);
+    }
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">
@@ -202,6 +170,28 @@ export default function ExploreRoute() {
           </View>
         )}
 
+        {isCatalogLoading ? (
+          <View className="mx-6 mt-6 rounded-2xl border border-[#F3F4F6] bg-white p-4">
+            <Text className="text-sm font-medium text-[#4B5563]">
+              Loading catalog...
+            </Text>
+          </View>
+        ) : null}
+
+        {catalogError ? (
+          <View className="mx-6 mt-6 rounded-2xl border border-[#FEE2E2] bg-white p-4">
+            <Text className="text-sm font-semibold text-[#991B1B]">
+              {catalogError}
+            </Text>
+
+            <Pressable className="mt-3 self-start" onPress={loadCatalog}>
+              <Text className="text-sm font-semibold text-[#7B61FF]">
+                Retry
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View className="px-6 mt-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-semibold text-[#111827]">
@@ -217,7 +207,7 @@ export default function ExploreRoute() {
           </View>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {popularDestinations.map((destination) => (
+            {catalog.popularDestinations.map((destination) => (
               <Pressable
                 key={destination.id}
                 style={{ width: "48%" }}
@@ -256,14 +246,14 @@ export default function ExploreRoute() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24 }}
           >
-            {regionalPlans.map((region) => (
+            {catalog.regionalPlans.map((region) => (
               <Pressable
                 key={region.id}
                 className="bg-white rounded-2xl p-4 mr-3 border border-[#F3F4F6]"
                 style={{ width: 160 }}
               >
                 <LinearGradient
-                  colors={region.colors as [string, string]}
+                  colors={region.colors}
                   style={{
                     width: 48,
                     height: 48,
@@ -297,7 +287,7 @@ export default function ExploreRoute() {
             Featured Plans
           </Text>
 
-          {featuredPlans.map((plan) => (
+          {catalog.featuredPlans.map((plan) => (
             <View
               key={plan.id}
               className="bg-white rounded-2xl p-4 border border-[#F3F4F6] mb-3"
@@ -313,7 +303,7 @@ export default function ExploreRoute() {
                       </Text>
 
                       <Text className="text-xs text-[#6B7280] mt-1">
-                        {plan.data} • {plan.validity} • {plan.network}
+                        {plan.data} - {plan.validity} - {plan.network}
                       </Text>
                     </View>
 
@@ -352,7 +342,10 @@ export default function ExploreRoute() {
                     <Pressable
                       className="px-4 py-2 rounded-xl border-2 border-[#7B61FF]"
                       onPress={() =>
-                        Alert.alert("View Details", `Open ${plan.country} plan`)
+                        router.push({
+                          pathname: "/plan/[id]",
+                          params: { id: plan.id },
+                        })
                       }
                     >
                       <Text className="text-sm font-medium text-[#7B61FF]">

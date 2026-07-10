@@ -7,13 +7,16 @@ import {
   Settings,
   Zap,
 } from "lucide-react-native";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Button, Flag, Row, Screen, Section } from "@/components/airconnect/ui";
 import { plans } from "@/constants/airconnect";
 
 export default function SuccessRoute() {
-  const { planId = "1" } = useLocalSearchParams<{ planId?: string }>();
+  const { planId = "1", email = "john@example.com" } = useLocalSearchParams<{
+    planId?: string;
+    email?: string;
+  }>();
   const plan = plans.find((item) => item.id === planId) ?? plans[0];
   const purchaseDate = new Date().toLocaleDateString("en-US", {
     month: "short",
@@ -110,8 +113,8 @@ export default function SuccessRoute() {
           <Row className="items-start gap-3">
             <Mail size={22} color="#6915E0" />
             <Text className="flex-1 text-sm leading-6 text-gray-600">
-              Your QR code and activation details were sent to john@example.com
-              and are available in My eSIMs.
+              Your QR code and activation details were sent to {email} and are
+              available in My eSIMs.
             </Text>
           </Row>
         </Section>
@@ -119,10 +122,7 @@ export default function SuccessRoute() {
           <Button
             label="Install eSIM"
             onPress={() =>
-              Alert.alert(
-                "Install eSIM",
-                "Open your eSIM installation guide from My eSIMs.",
-              )
+              router.push({ pathname: "/esim-details", params: { id: planId } })
             }
           />
           <Button

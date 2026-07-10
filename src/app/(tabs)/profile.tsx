@@ -27,10 +27,20 @@ import {
   Sun,
   Trash2,
   User,
-  Wifi
+  Wifi,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View,
+} from "react-native";
+
+import { useAuth } from "@/lib/auth";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -38,17 +48,66 @@ type IconComponent = React.ComponentType<{
   strokeWidth?: number;
 }>;
 
-const user = {
-  name: "John Smith",
-  email: "johnsmith@email.com",
-  phone: "+1 (415) 555-0192",
-  memberSince: "May 2026",
-  avatar: "JS",
-  tier: "Explorer",
-  points: 4250,
-  nextTierPoints: 6000,
-  nextTier: "Adventurer",
+type ProfileUser = {
+  name: string;
+  email: string;
+  phone: string;
+  memberSince: string;
+  avatar: string;
+  tier: string;
+  points: number;
+  nextTierPoints: number;
+  nextTier: string;
 };
+
+function formatMemberSince(createdAt?: string) {
+  if (!createdAt) {
+    return "Today";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    year: "numeric",
+  }).format(new Date(createdAt));
+}
+
+function getInitials(name: string, email: string) {
+  const source = name || email;
+  const words = source
+    .replace(/@.*/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+
+  return (
+    words
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase())
+      .join("") || "AC"
+  );
+}
+
+function getProfileUser(authUser: SupabaseUser): ProfileUser {
+  const metadata = authUser.user_metadata ?? {};
+  const name =
+    metadata.full_name ||
+    metadata.name ||
+    metadata.user_name ||
+    authUser.email?.split("@")[0] ||
+    "AirConnect Traveler";
+  const email = authUser.email ?? "No email available";
+
+  return {
+    name,
+    email,
+    phone: "+1 (415) 555-0192",
+    memberSince: formatMemberSince(authUser.created_at),
+    avatar: getInitials(name, email),
+    tier: "Explorer",
+    points: 4250,
+    nextTierPoints: 6000,
+    nextTier: "Adventurer",
+  };
+}
 
 const stats = [
   {
@@ -79,7 +138,7 @@ const quickActions = [
     icon: Smartphone,
     label: "My eSIMs",
     sub: "3 active",
-    screen: "/my-esims",
+    screen: "/(tabs)/my-esims",
     from: "#6915E0",
     to: "#9864E1",
   },
@@ -214,10 +273,140 @@ function SettingItem({
   );
 }
 
+function AuthMessage({ message }: { message: string }) {
+  return (
+    <View className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+      <Text className="text-sm font-medium text-red-600">{message}</Text>
+    </View>
+  );
+}
+
+function ProfileShell({ children }: { children: React.ReactNode }) {
+  return (
+    <View className="flex-1 bg-gray-50">
+      <View className="bg-white px-6 pt-14 pb-4 flex-row items-center justify-between border-b border-gray-100">
+        <Text className="text-[26px] font-bold text-gray-900">Profile</Text>
+
+        <View className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center">
+          <Settings size={20} color="#4B5563" />
+        </View>
+      </View>
+
+      {children}
+    </View>
+  );
+}
+
+function SignedOutProfile({
+  signingIn,
+  error,
+  onSignIn,
+}: {
+  signingIn: boolean;
+  error: string | null;
+  onSignIn: () => void;
+}) {
+  return (
+    <ProfileShell>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        <View className="px-5 pt-6">
+          <LinearGradient
+            colors={["#6915E0", "#9864E1"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="rounded-[28px] p-5"
+          >
+            <View className="w-14 h-14 rounded-2xl bg-white/20 items-center justify-center mb-5">
+              <User size={26} color="#FFFFFF" />
+            </View>
+
+            <Text className="text-white text-[24px] font-bold">
+              Sign in to AirConnect
+            </Text>
+
+            <Text className="text-white/80 text-sm leading-5 mt-2">
+              Use Google to create your account or continue to your travel
+              profile.
+            </Text>
+
+            <Pressable
+              disabled={signingIn}
+              onPress={onSignIn}
+              className={`mt-6 flex-row items-center justify-center rounded-2xl bg-white px-5 py-4 ${
+                signingIn ? "opacity-70" : ""
+              }`}
+            >
+              {signingIn ? (
+                <ActivityIndicator color="#6915E0" />
+              ) : (
+                <Globe size={20} color="#6915E0" />
+              )}
+              <Text className="ml-3 text-base font-bold text-[#6915E0]">
+                {signingIn ? "Opening Google..." : "Continue with Google"}
+              </Text>
+            </Pressable>
+          </LinearGradient>
+
+          {!!error && <AuthMessage message={error} />}
+
+          <View className="mt-5">
+            <SectionCard title="Why Sign In">
+              <SettingItem
+                item={{
+                  icon: Shield,
+                  label: "Secure checkout",
+                  sub: "Keep purchases tied to your account",
+                }}
+              />
+              <SettingItem
+                item={{
+                  icon: Smartphone,
+                  label: "Saved eSIMs",
+                  sub: "Access plans across devices",
+                }}
+              />
+              <SettingItem
+                item={{
+                  icon: Gift,
+                  label: "Travel rewards",
+                  sub: "Track points and benefits",
+                }}
+              />
+            </SectionCard>
+          </View>
+        </View>
+      </ScrollView>
+    </ProfileShell>
+  );
+}
+
+function LoadingProfile() {
+  return (
+    <ProfileShell>
+      <View className="flex-1 items-center justify-center px-6">
+        <ActivityIndicator color="#6915E0" />
+        <Text className="mt-3 text-sm font-medium text-gray-500">
+          Loading your profile...
+        </Text>
+      </View>
+    </ProfileShell>
+  );
+}
+
 export default function ProfileRoute() {
   const router = useRouter();
+  const {
+    user: authUser,
+    initializing,
+    signingIn,
+    error,
+    signInWithGoogle,
+    signOut,
+  } = useAuth();
 
-  const [activeNav, setActiveNav] = useState("profile");
   const [pushEnabled, setPushEnabled] = useState(true);
   const [promoEnabled, setPromoEnabled] = useState(false);
   const [travelAlertsEnabled, setTravelAlertsEnabled] = useState(true);
@@ -226,7 +415,10 @@ export default function ProfileRoute() {
 
   const [rewardsBarWidth, setRewardsBarWidth] = useState(0);
 
-  const rewardsPercent = (user.points / user.nextTierPoints) * 100;
+  const profileUser = authUser ? getProfileUser(authUser) : null;
+  const rewardsPercent = profileUser
+    ? (profileUser.points / profileUser.nextTierPoints) * 100
+    : 0;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -236,22 +428,28 @@ export default function ProfileRoute() {
     return () => clearTimeout(timer);
   }, [rewardsPercent]);
 
+  if (initializing) {
+    return <LoadingProfile />;
+  }
+
+  if (!profileUser) {
+    return (
+      <SignedOutProfile
+        signingIn={signingIn}
+        error={error}
+        onSignIn={signInWithGoogle}
+      />
+    );
+  }
+
   return (
-    <View className="flex-1 bg-gray-50">
+    <ProfileShell>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingBottom: 120,
         }}
       >
-        <View className="bg-white px-6 pt-14 pb-4 flex-row items-center justify-between border-b border-gray-100">
-          <Text className="text-[26px] font-bold text-gray-900">Profile</Text>
-
-          <Pressable className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center">
-            <Settings size={20} color="#4B5563" />
-          </Pressable>
-        </View>
-
         <View className="px-5 pt-5">
           <View className="bg-white rounded-[28px] overflow-hidden border border-gray-100">
             <LinearGradient
@@ -268,7 +466,7 @@ export default function ProfileRoute() {
                   className="w-20 h-20 rounded-[20px] items-center justify-center"
                 >
                   <Text className="text-white text-xl font-bold">
-                    {user.avatar}
+                    {profileUser.avatar}
                   </Text>
                 </LinearGradient>
 
@@ -281,23 +479,25 @@ export default function ProfileRoute() {
               </View>
 
               <Text className="text-[20px] font-bold text-gray-900">
-                {user.name}
+                {profileUser.name}
               </Text>
 
-              <Text className="text-sm text-gray-500 mt-1">{user.email}</Text>
+              <Text className="text-sm text-gray-500 mt-1">
+                {profileUser.email}
+              </Text>
 
               <View className="flex-row flex-wrap mt-3">
                 <View className="flex-row items-center bg-[#F5F0FF] px-3 py-2 rounded-full mr-2">
                   <Star size={14} color="#6915E0" />
                   <Text className="text-xs font-semibold text-[#6915E0] ml-1">
-                    {user.tier}
+                    {profileUser.tier}
                   </Text>
                 </View>
 
                 <View className="flex-row items-center bg-gray-100 px-3 py-2 rounded-full">
                   <Clock size={12} color="#6B7280" />
                   <Text className="text-xs text-gray-500 ml-1">
-                    Member since {user.memberSince}
+                    Member since {profileUser.memberSince}
                   </Text>
                 </View>
               </View>
@@ -361,22 +561,26 @@ export default function ProfileRoute() {
                   </View>
 
                   <Text className="text-white text-2xl font-bold mt-2">
-                    {user.points.toLocaleString()} pts
+                    {profileUser.points.toLocaleString()} pts
                   </Text>
                 </View>
 
                 <View className="bg-white/20 px-3 py-2 rounded-full">
                   <Text className="text-white text-xs font-bold">
-                    {user.tier}
+                    {profileUser.tier}
                   </Text>
                 </View>
               </View>
 
               <View className="mb-4">
                 <View className="flex-row justify-between mb-2">
-                  <Text className="text-xs text-white/80">{user.tier}</Text>
+                  <Text className="text-xs text-white/80">
+                    {profileUser.tier}
+                  </Text>
 
-                  <Text className="text-xs text-white/80">{user.nextTier}</Text>
+                  <Text className="text-xs text-white/80">
+                    {profileUser.nextTier}
+                  </Text>
                 </View>
 
                 <View className="h-2 rounded-full bg-white/20 overflow-hidden">
@@ -389,8 +593,10 @@ export default function ProfileRoute() {
                 </View>
 
                 <Text className="text-xs text-white/80 mt-2">
-                  {(user.nextTierPoints - user.points).toLocaleString()} pts to{" "}
-                  {user.nextTier}
+                  {(
+                    profileUser.nextTierPoints - profileUser.points
+                  ).toLocaleString()}{" "}
+                  pts to {profileUser.nextTier}
                 </Text>
               </View>
 
@@ -557,6 +763,7 @@ export default function ProfileRoute() {
                   label: "Sign Out",
                   sub: "See you next time!",
                 }}
+                onPress={signOut}
               />
 
               <SettingItem
@@ -569,12 +776,14 @@ export default function ProfileRoute() {
               />
             </View>
 
+            {!!error && <AuthMessage message={error} />}
+
             <Text className="text-center text-xs text-gray-400 mt-4 mb-6">
               SimRoam v2.4.1 · Made with ❤️ for travelers
             </Text>
           </View>
         </View>
       </ScrollView>
-    </View>
+    </ProfileShell>
   );
 }

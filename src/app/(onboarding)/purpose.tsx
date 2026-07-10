@@ -9,6 +9,8 @@ import {
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { BackButton } from "@/components/airconnect/ui";
+
 const purposes = [
   { id: "vacation", label: "Vacation", icon: Palmtree },
   { id: "business", label: "Business", icon: Briefcase },
@@ -31,6 +33,10 @@ export default function TravelPurposeRoute() {
 
   return (
     <View className="flex-1 bg-white">
+      <View className="absolute left-6 top-14 z-10">
+        <BackButton />
+      </View>
+
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-6 pt-16 pb-8"

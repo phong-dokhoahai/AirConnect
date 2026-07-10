@@ -1,4 +1,5 @@
 export { Badge } from "./Badge";
+export { BackButton } from "./BackButton";
 export { Button } from "./Button";
 export { CodeLine } from "./CodeLine";
 export { ESIMCard } from "./ESIMCard";

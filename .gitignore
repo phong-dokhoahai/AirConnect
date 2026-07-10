@@ -48,3 +48,4 @@ _bmad/
 /.agents/
 /.github/agents/
 /srcWeb/
+/supabase/.temp

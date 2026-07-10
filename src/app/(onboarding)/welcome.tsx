@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Globe2, MapPin, Signal } from "lucide-react-native";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -56,6 +56,9 @@ function BouncingPin({
 
 export default function WelcomeRoute() {
   const scale = useSharedValue(1);
+  const navigateHome = useCallback(() => {
+    router.push("/(tabs)/home");
+  }, []);
 
   useEffect(() => {
     scale.value = withRepeat(
@@ -73,6 +76,20 @@ export default function WelcomeRoute() {
       false,
     );
   }, [scale]);
+
+  // useEffect(() => {
+  //   if (Platform.OS !== "android") return;
+
+  //   const subscription = BackHandler.addEventListener(
+  //     "hardwareBackPress",
+  //     () => {
+  //       navigateHome();
+  //       return true;
+  //     },
+  //   );
+
+  //   return () => subscription.remove();
+  // }, [navigateHome]);
 
   const globeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -129,10 +146,7 @@ export default function WelcomeRoute() {
           </Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => router.replace("/(tabs)/home")}
-          className="w-full px-6 py-4"
-        >
+        <Pressable onPress={navigateHome} className="w-full px-6 py-4">
           <Text className="text-center font-medium text-gray-600">Skip</Text>
         </Pressable>
       </View>

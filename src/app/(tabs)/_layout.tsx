@@ -1,13 +1,9 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Tabs } from 'expo-router';
-import {
-  Globe,
-  Home as HomeIcon,
-  Smartphone,
-  User,
-} from 'lucide-react-native';
-import type { ComponentProps, ComponentType } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import AnimatedTabBar, {
+  type TabsConfigsType,
+} from "curved-bottom-navigation-bar";
+import { Tabs } from "expo-router";
+import { Globe, Home as HomeIcon, Smartphone, User } from "lucide-react-native";
+import type { ComponentProps, ComponentType } from "react";
 
 type IconComponent = ComponentType<{
   size?: number;
@@ -15,110 +11,68 @@ type IconComponent = ComponentType<{
   strokeWidth?: number;
 }>;
 
-const active = '#6915E0';
-const inactive = '#9CA3AF';
+const active = "#5B21B6";
+const inactive = "#4B5563";
+const barColor = "#F5F3FF";
 
-const tabItems: Record<string, { icon: IconComponent; label: string }> = {
-  home: { icon: HomeIcon, label: 'Home' },
-  explore: { icon: Globe, label: 'Explore' },
-  'my-esims': { icon: Smartphone, label: 'My eSIMs' },
-  profile: { icon: User, label: 'Profile' },
+function createTabConfig(Icon: IconComponent): TabsConfigsType[string] {
+  return {
+    icon: ({ focused }) => (
+      <Icon
+        size={focused ? 24 : 22}
+        color={focused ? "#FFFFFF" : inactive}
+        strokeWidth={2.5}
+      />
+    ),
+  };
+}
+
+const tabs: TabsConfigsType = {
+  home: createTabConfig(HomeIcon),
+  explore: createTabConfig(Globe),
+  "my-esims": createTabConfig(Smartphone),
+  profile: createTabConfig(User),
 };
 
-const CustomTabBar: NonNullable<ComponentProps<typeof Tabs>['tabBar']> = ({
-  state,
-  descriptors,
-  navigation,
-}) => {
-  return (
-    <View className="border-t border-[#F3F4F6] bg-white px-2 py-3">
-      <View className="flex-row items-center justify-around">
-        {state.routes.map((route, index) => {
-          const options = descriptors[route.key]?.options;
-          const item = tabItems[route.name];
-          const label =
-            item?.label ??
-            (typeof options?.title === 'string' ? options.title : route.name);
-          const Icon = item?.icon ?? HomeIcon;
-          const isFocused = state.index === index;
+type ExpoTabBarProps = Parameters<
+  NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
+>[0];
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
-
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options?.tabBarAccessibilityLabel}
-              testID={options?.tabBarButtonTestID}
-              onPress={onPress}
-              className="items-center px-3 py-1"
-            >
-              {isFocused ? (
-                <LinearGradient
-                  colors={['#6915E0', '#9864E1']}
-                  style={{
-                    width: 40,
-                    height: 24,
-                    borderRadius: 999,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 2,
-                  }}
-                >
-                  <Icon size={14} color="#FFFFFF" strokeWidth={2.4} />
-                </LinearGradient>
-              ) : (
-                <Icon size={20} color={inactive} strokeWidth={2.4} />
-              )}
-
-              <Text
-                className="mt-1 text-xs font-medium"
-                style={{ color: isFocused ? active : inactive }}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-};
+const CurvedTabBar = AnimatedTabBar as unknown as ComponentType<
+  ExpoTabBarProps & {
+    tabs: TabsConfigsType;
+    barColor?: string;
+    dotColor?: string;
+    dotSize?: number;
+    barHeight?: number;
+    duration?: number;
+    titleShown?: boolean;
+  }
+>;
 
 export default function TabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => (
+        <CurvedTabBar
+          {...props}
+          tabs={tabs}
+          barColor={barColor}
+          dotColor={active}
+          dotSize={56}
+          barHeight={72}
+          duration={420}
+          titleShown={true}
+        />
+      )}
       screenOptions={{
         headerShown: false,
-      }}>
-      <Tabs.Screen
-        name="home"
-        options={{ title: 'Home' }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{ title: 'Explore' }}
-      />
-      <Tabs.Screen
-        name="my-esims"
-        options={{ title: 'My eSIMs' }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ title: 'Profile' }}
-      />
+      }}
+    >
+      <Tabs.Screen name="home" options={{ title: "Home" }} />
+      <Tabs.Screen name="explore" options={{ title: "Explore" }} />
+      <Tabs.Screen name="my-esims" options={{ title: "My eSIMs" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
 }

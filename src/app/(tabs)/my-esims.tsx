@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import {
   ArrowRight,
   Bell,
@@ -366,6 +367,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
 }
 
 export default function MyESIMsRoute() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -505,8 +507,7 @@ export default function MyESIMsRoute() {
                 esim={esim}
                 index={index}
                 onViewDetails={(id) => {
-                  // TODO: router.push({ pathname: "/esim-detail", params: { id } })
-                  console.log(id);
+                  router.push({ pathname: "/esim-details", params: { id } });
                 }}
               />
             ))
@@ -525,7 +526,7 @@ export default function MyESIMsRoute() {
             <EmptyState
               key="empty"
               onBrowse={() => {
-                // TODO: router.push("/explore")
+                router.push("/(tabs)/explore");
               }}
             />
           )}

@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   Check,
@@ -15,6 +15,8 @@ import {
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+
+import { plans } from "@/constants/airconnect";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -92,6 +94,8 @@ const relatedPlans = [
 
 export default function PlanDetailRoute() {
   const router = useRouter();
+  const { id = "1" } = useLocalSearchParams<{ id?: string }>();
+  const plan = plans.find((item) => item.id === id) ?? plans[0];
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -105,8 +109,7 @@ export default function PlanDetailRoute() {
   };
 
   const handleBuyNow = () => {
-    Alert.alert("Checkout", "Proceeding to checkout...");
-    // TODO: router.push("/checkout")
+    router.push({ pathname: "/checkout", params: { planId: plan.id } });
   };
 
   const handleAddToWishlist = () => {
@@ -261,7 +264,7 @@ export default function PlanDetailRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-xl font-semibold text-[#111827] mb-4">
-            What's Included
+            {"What's Included"}
           </Text>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
