@@ -15,6 +15,8 @@ import type {
   PopularDestination,
   RegionalPlan,
 } from "@/components/airconnect/home/types";
+import { getProfileUser } from "@/features/profile/utils";
+import { useAuth } from "@/lib/auth";
 import { getCatalogData } from "@/lib/catalogApi";
 
 type CatalogState = {
@@ -31,6 +33,7 @@ const emptyCatalog: CatalogState = {
 
 export default function HomeRoute() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
 
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -46,6 +49,7 @@ export default function HomeRoute() {
 
     return "Good Evening";
   }, []);
+  const profileUser = authUser ? getProfileUser(authUser) : null;
 
   const toggleFavorite = (planId: string) => {
     setFavorites((prev) =>
@@ -114,6 +118,8 @@ export default function HomeRoute() {
       >
         <HomeHeader
           greeting={greeting}
+          userName={profileUser?.name ?? "Traveler"}
+          avatar={profileUser?.avatar ?? "AC"}
           search={search}
           onSearchChange={setSearch}
         />

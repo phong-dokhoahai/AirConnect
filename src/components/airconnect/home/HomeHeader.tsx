@@ -4,10 +4,14 @@ import { Pressable, Text, TextInput, View } from "react-native";
 
 export function HomeHeader({
   greeting,
+  userName,
+  avatar,
   search,
   onSearchChange,
 }: {
   greeting: string;
+  userName: string;
+  avatar: string;
   search: string;
   onSearchChange: (value: string) => void;
 }) {
@@ -20,7 +24,7 @@ export function HomeHeader({
           </Text>
 
           <Text className="text-[28px] font-semibold text-[#111827]">
-            John {"\uD83D\uDC4B"}
+            {userName} {"\uD83D\uDC4B"}
           </Text>
 
           <Text className="text-sm text-[#6B7280] mt-1">
@@ -57,7 +61,7 @@ export function HomeHeader({
               alignItems: "center",
             }}
           >
-            <Text className="text-white font-semibold">J</Text>
+            <Text className="text-white font-semibold">{avatar}</Text>
           </CustomLinearGradient>
         </View>
       </View>

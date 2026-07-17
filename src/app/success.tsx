@@ -11,14 +11,16 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
 import { Button, Flag, Row, Screen, Section } from "@/components/airconnect/ui";
+import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
 import { getPlanDisplay, type PlanDisplayRow } from "@/lib/planDisplay";
 
 export default function SuccessRoute() {
-  const { planId, email = "john@example.com" } = useLocalSearchParams<{
+  const { planId, email } = useLocalSearchParams<{
     planId?: string;
     email?: string;
   }>();
+  const { user: authUser } = useAuth();
   const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(planId));
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export default function SuccessRoute() {
     year: "numeric",
   });
   const display = plan ? getPlanDisplay(plan) : null;
+  const deliveryEmail = email ?? authUser?.email;
 
   if (isLoading) {
     return (
@@ -179,8 +182,9 @@ export default function SuccessRoute() {
           <Row className="items-start gap-3">
             <Mail size={22} color="#6915E0" />
             <Text className="flex-1 text-sm leading-6 text-gray-600">
-              Your QR code and activation details were sent to {email} and are
-              available in My eSIMs.
+              {deliveryEmail
+                ? `Your QR code and activation details were sent to ${deliveryEmail} and are available in My eSIMs.`
+                : "Your QR code and activation details are available in My eSIMs."}
             </Text>
           </Row>
         </Section>

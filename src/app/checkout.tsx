@@ -26,6 +26,8 @@ import {
 import { useEffect, useState } from "react";
 
 import { Flag } from "@/components/airconnect/ui";
+import { getProfileUser } from "@/features/profile/utils";
+import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
 import {
   formatMoney,
@@ -57,6 +59,7 @@ const benefits = [
 
 export default function CheckoutRoute() {
   const { planId } = useLocalSearchParams<{ planId?: string }>();
+  const { user: authUser } = useAuth();
   const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(planId));
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -65,6 +68,8 @@ export default function CheckoutRoute() {
   const [appliedPromo, setAppliedPromo] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const profileUser = authUser ? getProfileUser(authUser) : null;
+  const profileEmail = authUser?.email ?? "";
 
   useEffect(() => {
     let isMounted = true;
@@ -115,14 +120,17 @@ export default function CheckoutRoute() {
   const handleCompletePurchase = () => {
     if (!plan) return;
 
-    if (!fullName || !email) {
+    const purchaseFullName = fullName.trim() || profileUser?.name || "";
+    const purchaseEmail = email.trim() || profileEmail;
+
+    if (!purchaseFullName || !purchaseEmail) {
       Alert.alert("Please fill in all required fields");
       return;
     }
 
     router.replace({
       pathname: "/success",
-      params: { planId: plan.id, email },
+      params: { planId: plan.id, email: purchaseEmail },
     });
   };
 
@@ -217,7 +225,7 @@ export default function CheckoutRoute() {
             <TextInput
               value={fullName}
               onChangeText={setFullName}
-              placeholder="John Doe"
+              placeholder={profileUser?.name ?? "Full name"}
               placeholderTextColor="#9CA3AF"
               className="mb-4 rounded-xl bg-gray-50 px-4 py-3 text-gray-900"
             />
@@ -229,7 +237,7 @@ export default function CheckoutRoute() {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder="john@example.com"
+              placeholder={profileEmail || "email@example.com"}
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
               autoCapitalize="none"
