@@ -1,3 +1,23 @@
+diff --git a/node_modules/curved-bottom-navigation-bar/android/build.gradle b/node_modules/curved-bottom-navigation-bar/android/build.gradle
+index 6307080..cdbe8e2 100644
+--- a/node_modules/curved-bottom-navigation-bar/android/build.gradle
++++ b/node_modules/curved-bottom-navigation-bar/android/build.gradle
+@@ -5,7 +5,6 @@ buildscript {
+   repositories {
+     google()
+     mavenCentral()
+-    jcenter()
+   }
+ 
+   dependencies {
+@@ -52,7 +51,6 @@ android {
+ 
+ repositories {
+   mavenCentral()
+-  jcenter()
+   google()
+ 
+   def found = false
 diff --git a/node_modules/curved-bottom-navigation-bar/lib/commonjs/RNShadow.js b/node_modules/curved-bottom-navigation-bar/lib/commonjs/RNShadow.js
 index 6ce7d98..f1ac13c 100644
 --- a/node_modules/curved-bottom-navigation-bar/lib/commonjs/RNShadow.js

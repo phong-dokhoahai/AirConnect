@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -252,7 +252,7 @@ export default function ExploreRoute() {
                 className="bg-white rounded-2xl p-4 mr-3 border border-[#F3F4F6]"
                 style={{ width: 160 }}
               >
-                <LinearGradient
+                <CustomLinearGradient
                   colors={region.colors}
                   style={{
                     width: 48,
@@ -264,7 +264,7 @@ export default function ExploreRoute() {
                   }}
                 >
                   <Text style={{ fontSize: 24 }}>{region.icon}</Text>
-                </LinearGradient>
+                </CustomLinearGradient>
 
                 <Text className="font-semibold text-[#111827] mb-1">
                   {region.name}
@@ -368,7 +368,7 @@ export default function ExploreRoute() {
           bottom: 32,
         }}
       >
-        <LinearGradient
+        <CustomLinearGradient
           colors={["#5B8DEF", "#7B61FF"]}
           style={{
             width: 56,
@@ -379,7 +379,7 @@ export default function ExploreRoute() {
           }}
         >
           <Filter size={24} color="#FFFFFF" />
-        </LinearGradient>
+        </CustomLinearGradient>
       </Pressable>
 
       <Modal

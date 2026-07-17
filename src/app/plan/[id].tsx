@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -119,7 +119,7 @@ export default function PlanDetailRoute() {
   return (
     <View className="flex-1 bg-[#F9FAFB]">
       <View className="absolute top-0 left-0 right-0 z-20 px-6 pt-12 pb-6">
-        <LinearGradient
+        <CustomLinearGradient
           colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]}
           style={{
             position: "absolute",
@@ -165,7 +165,7 @@ export default function PlanDetailRoute() {
         contentContainerStyle={{ paddingBottom: 220 }}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
+        <CustomLinearGradient
           colors={["#5B8DEF", "#7B61FF"]}
           style={{
             height: 256,
@@ -200,7 +200,7 @@ export default function PlanDetailRoute() {
             <Text style={{ fontSize: 72, marginBottom: 12 }}>🇯🇵</Text>
             <Text className="text-3xl font-bold text-white">Japan</Text>
           </View>
-        </LinearGradient>
+        </CustomLinearGradient>
 
         <View className="px-6 -mt-8 z-10">
           <View className="bg-white rounded-3xl p-6 border border-[#F3F4F6]">

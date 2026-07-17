@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { Bell, Search } from "lucide-react-native";
 import { Pressable, Text, TextInput, View } from "react-native";
 
@@ -47,7 +47,7 @@ export function HomeHeader({
             </View>
           </Pressable>
 
-          <LinearGradient
+          <CustomLinearGradient
             colors={["#5B8DEF", "#7B61FF"]}
             style={{
               width: 40,
@@ -58,7 +58,7 @@ export function HomeHeader({
             }}
           >
             <Text className="text-white font-semibold">J</Text>
-          </LinearGradient>
+          </CustomLinearGradient>
         </View>
       </View>
 

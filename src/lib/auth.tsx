@@ -17,6 +17,8 @@ import { supabase } from './supabase';
 WebBrowser.maybeCompleteAuthSession();
 
 const AUTH_REDIRECT_PATH = 'auth/callback';
+const AUTH_REDIRECT_NATIVE = `airconnect://${AUTH_REDIRECT_PATH}`;
+const exchangedAuthCodes = new Set<string>();
 
 type AuthContextValue = {
   session: Session | null;
@@ -34,6 +36,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 function getRedirectTo() {
   return makeRedirectUri({
     scheme: 'airconnect',
+    native: AUTH_REDIRECT_NATIVE,
     path: AUTH_REDIRECT_PATH,
   });
 }
@@ -48,19 +51,39 @@ function getErrorMessage(error: unknown) {
 
 function getOAuthCallbackCode(callbackUrl: string) {
   const url = new URL(callbackUrl);
-  const error = url.searchParams.get('error_description') ?? url.searchParams.get('error');
+
+  return getOAuthCallbackCodeFromParams(url.searchParams);
+}
+
+export function getOAuthCallbackCodeFromParams(params: URLSearchParams) {
+  const error = params.get('error_description') ?? params.get('error');
 
   if (error) {
     throw new Error(error);
   }
 
-  const code = url.searchParams.get('code');
+  const code = params.get('code');
 
   if (!code) {
     throw new Error('Google did not return an authorization code.');
   }
 
   return code;
+}
+
+export async function exchangeOAuthCallbackCode(code: string) {
+  if (exchangedAuthCodes.has(code)) {
+    return;
+  }
+
+  exchangedAuthCodes.add(code);
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    exchangedAuthCodes.delete(code);
+    throw error;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -131,12 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.type === 'success') {
         const authCode = getOAuthCallbackCode(result.url);
-        const { error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(authCode);
-
-        if (exchangeError) {
-          throw exchangeError;
-        }
+        await exchangeOAuthCallbackCode(authCode);
       }
     } catch (authError) {
       setError(getErrorMessage(authError));

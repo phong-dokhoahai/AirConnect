@@ -14,8 +14,8 @@ import {
   Users,
   Zap,
 } from "lucide-react-native";
-import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -23,8 +23,16 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useEffect, useState } from "react";
 
-import { plans } from "@/constants/airconnect";
+import { Flag } from "@/components/airconnect/ui";
+import { getPlanDetails } from "@/lib/catalogQueries";
+import {
+  formatMoney,
+  getPlanDisplay,
+  type PlanDisplayRow,
+  toNumber,
+} from "@/lib/planDisplay";
 
 const paymentMethods = [
   { id: "card", label: "Credit / Debit Card", icon: CreditCard },
@@ -47,24 +55,54 @@ const benefits = [
   { icon: Phone, label: "Keep Your Existing Number" },
 ];
 
-function parsePrice(price: string) {
-  const value = Number.parseFloat(price.replace(/[^0-9.]/g, ""));
-  return Number.isFinite(value) ? value : 0;
-}
-
 export default function CheckoutRoute() {
-  const { planId = "1" } = useLocalSearchParams<{ planId?: string }>();
-  const plan = plans.find((item) => item.id === planId) ?? plans[0];
+  const { planId } = useLocalSearchParams<{ planId?: string }>();
+  const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(planId));
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState("card");
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
 
-  const planPrice = parsePrice(plan.price);
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!planId) return;
+
+    getPlanDetails(planId)
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+
+        if (error || !data) {
+          console.error("Checkout plan load failed", error);
+          setLoadError("Unable to load this package.");
+        } else {
+          setPlan(data as unknown as PlanDisplayRow);
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("Checkout plan load failed", error);
+          setLoadError("Unable to load this package.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [planId]);
+
+  const planPrice = toNumber(plan?.price);
   const discount = appliedPromo ? 2.0 : 0;
   const taxes = 0.5;
-  const total = planPrice - discount + taxes;
+  const total = Math.max(0, planPrice - discount + taxes);
+  const display = plan ? getPlanDisplay(plan) : null;
 
   const handleApplyPromo = () => {
     if (promoCode.toUpperCase() === "SUMMER25") {
@@ -75,6 +113,8 @@ export default function CheckoutRoute() {
   };
 
   const handleCompletePurchase = () => {
+    if (!plan) return;
+
     if (!fullName || !email) {
       Alert.alert("Please fill in all required fields");
       return;
@@ -85,6 +125,31 @@ export default function CheckoutRoute() {
       params: { planId: plan.id, email },
     });
   };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator color="#7B61FF" />
+        <Text className="mt-3 text-sm text-gray-600">Loading package...</Text>
+      </View>
+    );
+  }
+
+  if (!planId || !plan || loadError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50 px-6">
+        <Text className="text-center text-lg font-semibold text-gray-900">
+          {loadError ?? (planId ? "Package unavailable." : "Missing plan.")}
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          className="mt-5 rounded-2xl bg-[#7B61FF] px-6 py-3"
+        >
+          <Text className="font-medium text-white">Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -112,20 +177,20 @@ export default function CheckoutRoute() {
           <View className="rounded-3xl bg-[#7B61FF] p-5">
             <View className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1">
               <Text className="text-xs font-semibold text-[#7B61FF]">
-                Save 25%
+                {plan.currency}
               </Text>
             </View>
 
             <View className="mb-4 flex-row items-start gap-4">
-              <Text className="text-5xl">🇯🇵</Text>
+              <Flag value={display?.flag ?? "GL"} large />
 
               <View className="flex-1">
                 <Text className="mb-1 text-xl font-semibold text-white">
-                  {plan.country} eSIM
+                  {display?.name} eSIM
                 </Text>
 
                 <Text className="text-sm text-white/90">
-                  {plan.data} - {plan.validity} - {plan.network}
+                  {display?.data} - {display?.validity} - {display?.network}
                 </Text>
               </View>
             </View>
@@ -133,7 +198,7 @@ export default function CheckoutRoute() {
             <View className="flex-row items-end justify-between border-t border-white/20 pt-3">
               <Text className="text-sm text-white/90">Plan Price</Text>
               <Text className="text-2xl font-bold text-white">
-                ${planPrice.toFixed(2)}
+                {formatMoney(planPrice, plan.currency)}
               </Text>
             </View>
           </View>
@@ -291,7 +356,7 @@ export default function CheckoutRoute() {
             <View className="mb-3 flex-row justify-between">
               <Text className="text-gray-700">Plan Price</Text>
               <Text className="font-medium text-gray-900">
-                ${planPrice.toFixed(2)}
+                {formatMoney(planPrice, plan.currency)}
               </Text>
             </View>
 
@@ -299,7 +364,7 @@ export default function CheckoutRoute() {
               <View className="mb-3 flex-row justify-between">
                 <Text className="text-green-600">Discount</Text>
                 <Text className="font-medium text-green-600">
-                  -${discount.toFixed(2)}
+                  -{formatMoney(discount, plan.currency)}
                 </Text>
               </View>
             ) : null}
@@ -307,14 +372,14 @@ export default function CheckoutRoute() {
             <View className="mb-3 flex-row justify-between">
               <Text className="text-gray-700">Taxes & Fees</Text>
               <Text className="font-medium text-gray-900">
-                ${taxes.toFixed(2)}
+                {formatMoney(taxes, plan.currency)}
               </Text>
             </View>
 
             <View className="mt-3 flex-row justify-between border-t border-gray-200 pt-3">
               <Text className="text-lg font-semibold text-gray-900">Total</Text>
               <Text className="text-lg font-bold text-[#7B61FF]">
-                ${total.toFixed(2)}
+                {formatMoney(total, plan.currency)}
               </Text>
             </View>
           </View>
@@ -363,7 +428,7 @@ export default function CheckoutRoute() {
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-sm text-gray-500">Total</Text>
           <Text className="text-2xl font-bold text-gray-900">
-            ${total.toFixed(2)}
+            {formatMoney(total, plan.currency)}
           </Text>
         </View>
 

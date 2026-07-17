@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useRouter } from "expo-router";
 import {
   ArrowRight,
@@ -176,7 +176,7 @@ function DataProgressBar({
             }}
           />
         ) : (
-          <LinearGradient
+          <CustomLinearGradient
             colors={
               status === "ready"
                 ? ["#6915E0", "#9864E1"]
@@ -227,7 +227,7 @@ function ESIMCardItem({
       layout={LinearTransition.duration(250)}
       className={`bg-white rounded-3xl border ${borderColor} overflow-hidden mb-4`}
     >
-      <LinearGradient colors={topColors} style={{ height: 4 }} />
+      <CustomLinearGradient colors={topColors} style={{ height: 4 }} />
 
       <View className="p-5">
         <View className="flex-row items-center mb-4">
@@ -267,7 +267,7 @@ function ESIMCardItem({
         {esim.status !== "expired" && (
           <View className="mt-3 flex-row items-center">
             <View className="flex-1 h-1.5 rounded-full bg-[#F3F4F6] overflow-hidden">
-              <LinearGradient
+              <CustomLinearGradient
                 colors={
                   esim.status === "ready"
                     ? ["#6915E0", "#9864E1"]
@@ -324,7 +324,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
           <Smartphone size={56} color="rgba(105,21,224,0.3)" />
         </View>
 
-        <LinearGradient
+        <CustomLinearGradient
           colors={["#5B8DEF", "#6915E0"]}
           style={{
             position: "absolute",
@@ -338,7 +338,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
           }}
         >
           <Signal size={20} color="#FFFFFF" />
-        </LinearGradient>
+        </CustomLinearGradient>
       </View>
 
       <Text className="font-bold text-[#111827] mb-2">No eSIMs yet</Text>
@@ -348,7 +348,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
       </Text>
 
       <Pressable onPress={onBrowse}>
-        <LinearGradient
+        <CustomLinearGradient
           colors={["#6915E0", "#9864E1"]}
           style={{
             paddingHorizontal: 24,
@@ -360,7 +360,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
         >
           <Text className="text-white font-semibold mr-2">Browse Plans</Text>
           <ArrowRight size={16} color="#FFFFFF" />
-        </LinearGradient>
+        </CustomLinearGradient>
       </Pressable>
     </Animated.View>
   );
@@ -413,7 +413,7 @@ export default function MyESIMsRoute() {
               )}
             </Pressable>
 
-            <LinearGradient
+            <CustomLinearGradient
               colors={["#5B8DEF", "#6915E0"]}
               style={{
                 width: 40,
@@ -424,7 +424,7 @@ export default function MyESIMsRoute() {
               }}
             >
               <Text className="text-white font-bold text-sm">J</Text>
-            </LinearGradient>
+            </CustomLinearGradient>
           </View>
         </View>
 
@@ -475,7 +475,7 @@ export default function MyESIMsRoute() {
                 style={{ marginRight: 8 }}
               >
                 {isActive ? (
-                  <LinearGradient
+                  <CustomLinearGradient
                     colors={["#6915E0", "#9864E1"]}
                     style={{
                       paddingHorizontal: 16,
@@ -486,7 +486,7 @@ export default function MyESIMsRoute() {
                     <Text className="text-white text-sm font-semibold">
                       {f.label}
                     </Text>
-                  </LinearGradient>
+                  </CustomLinearGradient>
                 ) : (
                   <View className="px-4 py-2 rounded-full bg-white border border-[#E5E7EB]">
                     <Text className="text-[#4B5563] text-sm font-medium">

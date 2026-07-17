@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { Pressable, Text, View } from "react-native";
 
 import { SectionHeader } from "./SectionHeader";
@@ -16,7 +16,7 @@ export function RegionalPlansSection({ plans }: { plans: RegionalPlan[] }) {
             style={{ width: "48%" }}
             className="bg-white rounded-3xl p-4 border border-[#F3F4F6]"
           >
-            <LinearGradient
+            <CustomLinearGradient
               colors={item.colors}
               style={{
                 width: 48,
@@ -28,7 +28,7 @@ export function RegionalPlansSection({ plans }: { plans: RegionalPlan[] }) {
               }}
             >
               <Text style={{ fontSize: 22 }}>{item.icon}</Text>
-            </LinearGradient>
+            </CustomLinearGradient>
 
             <Text className="font-semibold text-[#111827]">{item.name}</Text>
 

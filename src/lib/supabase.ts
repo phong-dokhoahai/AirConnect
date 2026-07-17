@@ -17,7 +17,7 @@ if (!supabasePublishableKey) {
 
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: localStorage,
+    storage: globalThis.localStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

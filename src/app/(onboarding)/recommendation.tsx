@@ -1,7 +1,7 @@
 import { getName } from "country-list";
 import { router, useLocalSearchParams } from "expo-router";
 import { Check, Globe, Signal, Zap } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -197,7 +197,7 @@ function getBestPlan(
 }
 
 function getNetworkLabel(plan: RecommendationPlan | null) {
-  if (!plan) return "4G LTE / 5G";
+  if (!plan) return "Unavailable";
 
   const networkTypes = new Set(
     (plan.plan_networks ?? []).map((network) => network.network_type),
@@ -277,30 +277,38 @@ export default function RecommendationRoute() {
   useEffect(() => {
     let isMounted = true;
 
-    getActiveRecommendationPlans().then(({ data, error }) => {
-      if (!isMounted) return;
+    getActiveRecommendationPlans()
+      .then(({ data, error }) => {
+        if (!isMounted) return;
 
-      if (error) {
-        console.error("Recommendation plan load failed", error);
-        setLoadError("Unable to check matching packages right now.");
-        setPlans([]);
-      } else {
-        setLoadError(null);
-        setPlans((data ?? []) as unknown as RecommendationPlan[]);
-      }
-
-      setIsLoading(false);
-    });
+        if (error) {
+          console.error("Recommendation plan load failed", error);
+          setLoadError("Unable to check matching packages right now.");
+          setPlans([]);
+        } else {
+          setLoadError(null);
+          setPlans((data ?? []) as unknown as RecommendationPlan[]);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("Recommendation plan load failed", error);
+          setLoadError("Unable to check matching packages right now.");
+          setPlans([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const selectedPlan = useMemo(
-    () => getBestPlan(plans, destinationIds, usage) ?? null,
-    [destinationIds, plans, usage],
-  );
+  const selectedPlan = getBestPlan(plans, destinationIds, usage) ?? null;
   const recommendation = selectedPlan
     ? {
         data: formatData(selectedPlan),
@@ -312,9 +320,11 @@ export default function RecommendationRoute() {
   const networkLabel = getNetworkLabel(selectedPlan);
 
   const handleBuyNow = () => {
+    if (!selectedPlan) return;
+
     router.push({
       pathname: "/checkout",
-      params: selectedPlan ? { planId: selectedPlan.id } : undefined,
+      params: { planId: selectedPlan.id },
     });
   };
 

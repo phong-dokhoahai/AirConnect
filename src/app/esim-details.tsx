@@ -1,5 +1,5 @@
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   BookOpen,
@@ -24,12 +24,26 @@ import {
   Zap,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   FadeIn,
   FadeInDown,
-  LinearTransition
+  LinearTransition,
 } from "react-native-reanimated";
+
+import { getPlanDetails } from "@/lib/catalogQueries";
+import {
+  getPlanDisplay,
+  toNumber,
+  type PlanDisplayRow,
+} from "@/lib/planDisplay";
 
 type ESIMStatus = "active" | "ready" | "expired";
 
@@ -62,6 +76,55 @@ const esimData = {
   supportedNetworks: ["NTT Docomo", "SoftBank", "KDDI", "Rakuten"],
   isInstalled: true,
 };
+
+type ESIMPlanRow = PlanDisplayRow & {
+  plan_networks?: { network_name: string }[] | null;
+};
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function buildESIMData(plan: ESIMPlanRow) {
+  const display = getPlanDisplay(plan);
+  const start = new Date();
+  const expiry = new Date(start);
+  expiry.setDate(expiry.getDate() + plan.validity_days);
+  const dataTotalGB = plan.is_unlimited ? 0 : toNumber(plan.data_amount_gb);
+  const supportedNetworks = (plan.plan_networks ?? [])
+    .map((network) => network.network_name)
+    .filter(Boolean);
+
+  return {
+    id: plan.id,
+    flag: display.flag,
+    country: display.name,
+    planName: plan.title,
+    data: display.data,
+    days: display.validity,
+    status: "ready" as ESIMStatus,
+    network: display.network,
+    dataUsedGB: 0,
+    dataTotalGB,
+    daysRemaining: plan.validity_days,
+    daysTotal: plan.validity_days,
+    startDate: formatDate(start),
+    expiryDate: formatDate(expiry),
+    coverage: display.name,
+    networkStatus: "Ready",
+    iccid: `Pending-${plan.id}`,
+    activationCode: `LPA:1$airconnect.example$${plan.id}`,
+    smdpAddress: "airconnect.example",
+    supportedNetworks: supportedNetworks.length
+      ? supportedNetworks
+      : [display.network],
+    isInstalled: false,
+  };
+}
 
 const qrPattern = [
   [1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
@@ -136,7 +199,7 @@ function CircularProgress({
         overflow: "hidden",
       }}
     >
-      <LinearGradient
+      <CustomLinearGradient
         colors={["#5B8DEF", "#6915E0"]}
         style={{
           position: "absolute",
@@ -272,7 +335,7 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
 
   if (status === "ready") {
     return (
-      <LinearGradient
+      <CustomLinearGradient
         colors={["#6915E0", "#9864E1"]}
         style={{
           paddingHorizontal: 12,
@@ -284,7 +347,7 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
       >
         <Signal size={12} color="#FFFFFF" />
         <Text className="text-white text-xs font-bold ml-1.5">READY</Text>
-      </LinearGradient>
+      </CustomLinearGradient>
     );
   }
 
@@ -298,14 +361,50 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
 
 export default function ESIMDetailsRoute() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [activationExpanded, setActivationExpanded] = useState(false);
   const [copiedOrderId, setCopiedOrderId] = useState(false);
   const [progressWidth, setProgressWidth] = useState(0);
+  const [plan, setPlan] = useState<ESIMPlanRow | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(id));
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const e = esimData;
-  const dataPercent = (e.dataUsedGB / e.dataTotalGB) * 100;
-  const daysPercent = (e.daysRemaining / e.daysTotal) * 100;
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!id) return;
+
+    getPlanDetails(id)
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+
+        if (error || !data) {
+          console.error("eSIM details load failed", error);
+          setLoadError("Unable to load this eSIM.");
+        } else {
+          setPlan(data as unknown as ESIMPlanRow);
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("eSIM details load failed", error);
+          setLoadError("Unable to load this eSIM.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const e = plan ? buildESIMData(plan) : esimData;
+  const dataPercent = e.dataTotalGB ? (e.dataUsedGB / e.dataTotalGB) * 100 : 0;
+  const daysPercent = e.daysTotal ? (e.daysRemaining / e.daysTotal) * 100 : 0;
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -314,6 +413,31 @@ export default function ESIMDetailsRoute() {
 
     return () => clearTimeout(t);
   }, [dataPercent]);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#F9FAFB]">
+        <ActivityIndicator color="#6915E0" />
+        <Text className="mt-3 text-sm text-[#6B7280]">Loading eSIM...</Text>
+      </View>
+    );
+  }
+
+  if (!id || !plan || loadError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#F9FAFB] px-6">
+        <Text className="text-center text-lg font-bold text-[#111827]">
+          {loadError ?? (id ? "eSIM unavailable." : "Missing eSIM.")}
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          className="mt-5 rounded-2xl bg-[#6915E0] px-6 py-3"
+        >
+          <Text className="font-bold text-white">Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   const handleCopyOrder = () => {
     setCopiedOrderId(true);
@@ -388,7 +512,7 @@ export default function ESIMDetailsRoute() {
         showsVerticalScrollIndicator={false}
       >
         <SectionCard>
-          <LinearGradient
+          <CustomLinearGradient
             colors={["#6915E0", "#9864E1"]}
             style={{
               paddingHorizontal: 24,
@@ -456,7 +580,7 @@ export default function ESIMDetailsRoute() {
                 <Copy size={14} color="rgba(255,255,255,0.7)" />
               )}
             </Pressable>
-          </LinearGradient>
+          </CustomLinearGradient>
         </SectionCard>
 
         <View className="flex-row justify-between mt-4">
@@ -558,7 +682,7 @@ export default function ESIMDetailsRoute() {
 
         {!e.isInstalled && (
           <Animated.View entering={FadeInDown.duration(350)} className="mt-4">
-            <LinearGradient
+            <CustomLinearGradient
               colors={["#6915E0", "#9864E1"]}
               style={{
                 borderRadius: 24,
@@ -593,7 +717,7 @@ export default function ESIMDetailsRoute() {
                   Watch Tutorial
                 </Text>
               </Pressable>
-            </LinearGradient>
+            </CustomLinearGradient>
           </Animated.View>
         )}
 
@@ -627,7 +751,7 @@ export default function ESIMDetailsRoute() {
                     <QRCodeDisplay />
 
                     <View className="absolute inset-0 items-center justify-center">
-                      <LinearGradient
+                      <CustomLinearGradient
                         colors={["#6915E0", "#9864E1"]}
                         style={{
                           width: 36,
@@ -638,7 +762,7 @@ export default function ESIMDetailsRoute() {
                         }}
                       >
                         <Wifi size={16} color="#FFFFFF" />
-                      </LinearGradient>
+                      </CustomLinearGradient>
                     </View>
                   </View>
                 </View>
@@ -652,7 +776,7 @@ export default function ESIMDetailsRoute() {
                   </Pressable>
 
                   <Pressable className="flex-1">
-                    <LinearGradient
+                    <CustomLinearGradient
                       colors={["#6915E0", "#9864E1"]}
                       style={{
                         paddingVertical: 12,
@@ -666,7 +790,7 @@ export default function ESIMDetailsRoute() {
                       <Text className="text-sm font-semibold text-white ml-2">
                         Share
                       </Text>
-                    </LinearGradient>
+                    </CustomLinearGradient>
                   </Pressable>
                 </View>
               </View>
@@ -779,7 +903,7 @@ export default function ESIMDetailsRoute() {
 
                 <View className="flex-1 mx-4">
                   <View className="h-3 bg-[#F3F4F6] rounded-full overflow-hidden">
-                    <LinearGradient
+                    <CustomLinearGradient
                       colors={["#5B8DEF", "#6915E0"]}
                       style={{
                         height: "100%",
@@ -839,7 +963,7 @@ export default function ESIMDetailsRoute() {
               </View>
 
               <Pressable className="w-full flex-row items-center p-3.5 bg-[#F5F0FF] rounded-2xl mb-2.5">
-                <LinearGradient
+                <CustomLinearGradient
                   colors={["#6915E0", "#9864E1"]}
                   style={{
                     width: 36,
@@ -851,7 +975,7 @@ export default function ESIMDetailsRoute() {
                   }}
                 >
                   <MessageCircle size={16} color="#FFFFFF" />
-                </LinearGradient>
+                </CustomLinearGradient>
 
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-[#111827]">
@@ -903,7 +1027,7 @@ export default function ESIMDetailsRoute() {
       <View className="border-t border-[#F3F4F6] bg-white px-5 py-4">
         <View className="flex-row">
           <Pressable className="flex-1 mr-3">
-            <LinearGradient
+            <CustomLinearGradient
               colors={["#6915E0", "#9864E1"]}
               style={{
                 paddingVertical: 14,
@@ -912,7 +1036,7 @@ export default function ESIMDetailsRoute() {
               }}
             >
               <Text className="text-white font-bold text-sm">Manage eSIM</Text>
-            </LinearGradient>
+            </CustomLinearGradient>
           </Pressable>
 
           <Pressable className="flex-1 py-3.5 bg-white border-2 border-[#E5E7EB] rounded-2xl flex-row items-center justify-center">

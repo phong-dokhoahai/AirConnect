@@ -1,11 +1,11 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { Globe } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
 export function PromoBanner() {
   return (
     <View className="px-6 mt-6">
-      <LinearGradient
+      <CustomLinearGradient
         colors={["#5B8DEF", "#7B61FF"]}
         style={{
           borderRadius: 24,
@@ -35,7 +35,7 @@ export function PromoBanner() {
 
           <Globe size={72} color="rgba(255,255,255,0.25)" />
         </View>
-      </LinearGradient>
+      </CustomLinearGradient>
     </View>
   );
 }

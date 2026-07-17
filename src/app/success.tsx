@@ -7,22 +7,88 @@ import {
   Settings,
   Zap,
 } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 
 import { Button, Flag, Row, Screen, Section } from "@/components/airconnect/ui";
-import { plans } from "@/constants/airconnect";
+import { getPlanDetails } from "@/lib/catalogQueries";
+import { getPlanDisplay, type PlanDisplayRow } from "@/lib/planDisplay";
 
 export default function SuccessRoute() {
-  const { planId = "1", email = "john@example.com" } = useLocalSearchParams<{
+  const { planId, email = "john@example.com" } = useLocalSearchParams<{
     planId?: string;
     email?: string;
   }>();
-  const plan = plans.find((item) => item.id === planId) ?? plans[0];
+  const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(planId));
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!planId) return;
+
+    getPlanDetails(planId)
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+
+        if (error || !data) {
+          console.error("Success plan load failed", error);
+          setLoadError("Unable to load this package.");
+        } else {
+          setPlan(data as unknown as PlanDisplayRow);
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("Success plan load failed", error);
+          setLoadError("Unable to load this package.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [planId]);
+
   const purchaseDate = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+  const display = plan ? getPlanDisplay(plan) : null;
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#6915E0" />
+          <Text className="mt-3 text-sm text-gray-600">Loading package...</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!planId || !plan || loadError) {
+    return (
+      <Screen>
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-center text-lg font-bold text-gray-950">
+            {loadError ?? (planId ? "Package unavailable." : "Missing plan.")}
+          </Text>
+          <Button
+            label="Home"
+            variant="secondary"
+            onPress={() => router.replace("/(tabs)/home")}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen padded={false}>
@@ -40,16 +106,16 @@ export default function SuccessRoute() {
       <View className="-mt-8 px-5">
         <View className="rounded-[32px] bg-white p-6">
           <Row className="items-start gap-4">
-            <Flag value={plan.flag} large />
+            <Flag value={display?.flag ?? "GL"} large />
             <View className="flex-1">
               <Text className="text-xl font-black text-gray-950">
-                {plan.country} eSIM
+                {display?.name} eSIM
               </Text>
               <Text className="mt-2 text-sm text-gray-500">
-                {plan.data} - {plan.validity} - {plan.network}
+                {display?.data} - {display?.validity} - {display?.network}
               </Text>
               <Text className="mt-3 text-xs text-gray-500">
-                Order # {plan.flag}-2026-123456
+                Plan ID: {plan.id}
               </Text>
               <Text className="mt-1 text-xs text-gray-500">
                 Purchase Date: {purchaseDate}
@@ -122,7 +188,7 @@ export default function SuccessRoute() {
           <Button
             label="Install eSIM"
             onPress={() =>
-              router.push({ pathname: "/esim-details", params: { id: planId } })
+              router.push({ pathname: "/esim-details", params: { id: plan.id } })
             }
           />
           <Button

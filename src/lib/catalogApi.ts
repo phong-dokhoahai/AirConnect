@@ -167,15 +167,23 @@ function getNetworkLabel(plan: CatalogPlanRow) {
   return "4G";
 }
 
+function rows<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.isArray(value) ? value : [value];
+}
+
 function getPlanCountries(plan: CatalogPlanRow) {
   return (plan.plan_countries ?? [])
-    .flatMap((entry) => entry.countries ?? [])
+    .flatMap((entry) => rows(entry.countries))
     .filter((country): country is CountryRow => Boolean(country));
 }
 
 function getPlanRegions(plan: CatalogPlanRow) {
   return (plan.plan_regions ?? [])
-    .flatMap((entry) => entry.regions ?? [])
+    .flatMap((entry) => rows(entry.regions))
     .filter((region): region is Omit<RegionRow, "region_countries"> =>
       Boolean(region),
     );
@@ -225,7 +233,9 @@ function mapRegionalPlans(
     return {
       id: region.slug,
       name: region.name,
-      countries: region.region_countries?.length ?? 0,
+      countries: (region.region_countries ?? []).flatMap((entry) =>
+        rows(entry.countries),
+      ).length,
       price: plan ? formatPrice(plan.price, plan.currency) : "Check plans",
       icon: presentation.icon,
       colors: presentation.colors,
@@ -276,9 +286,9 @@ export async function getCatalogData(): Promise<CatalogApiResponse> {
 
   return {
     data: {
-      popularDestinations: mapPopularDestinations(countries, plans),
+      popularDestinations: mapPopularDestinations(countries, plans).slice(0, 9),
       regionalPlans: mapRegionalPlans(regions, plans),
-      featuredPlans: mapFeaturedPlans(plans),
+      featuredPlans: mapFeaturedPlans(plans).slice(0, 6),
     },
     error: null,
   };

@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { Zap } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
@@ -50,7 +50,7 @@ export function ActiveEsimCard({ onViewDetails }: { onViewDetails: () => void })
             overflow: "hidden",
           }}
         >
-          <LinearGradient
+          <CustomLinearGradient
             colors={["#5B8DEF", "#7B61FF"]}
             style={{
               width: "72%",
