@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { BackButton, Flag } from "@/components/airconnect/ui";
+import { useAuth } from "@/lib/auth";
 import { getActiveRecommendationPlans } from "@/lib/catalogQueries";
 
 const purposeLabels: Record<string, string> = {
@@ -246,6 +247,7 @@ function NetworkRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function RecommendationRoute() {
+  const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
   const {
     purpose = "vacation",
     destinations = "jp",
@@ -319,8 +321,14 @@ export default function RecommendationRoute() {
   const featureLabels = getPlanFeatures(selectedPlan);
   const networkLabel = getNetworkLabel(selectedPlan);
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!selectedPlan) return;
+
+    if (!authUser) {
+      const session = await signInWithGoogle();
+
+      if (!session) return;
+    }
 
     router.push({
       pathname: "/checkout",
@@ -450,14 +458,18 @@ export default function RecommendationRoute() {
       <View className="gap-3 px-6 pb-8">
         <Pressable
           onPress={handleBuyNow}
-          disabled={!selectedPlan}
+          disabled={!selectedPlan || initializing || signingIn}
           className={`w-full rounded-2xl px-6 py-4 ${
-            selectedPlan ? "bg-[#7B61FF]" : "bg-gray-200"
+            selectedPlan && !initializing && !signingIn
+              ? "bg-[#7B61FF]"
+              : "bg-gray-200"
           }`}
         >
           <Text
             className={`text-center font-medium ${
-              selectedPlan ? "text-white" : "text-gray-500"
+              selectedPlan && !initializing && !signingIn
+                ? "text-white"
+                : "text-gray-500"
             }`}
           >
             Buy Now

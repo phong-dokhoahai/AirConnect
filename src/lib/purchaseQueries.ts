@@ -14,6 +14,11 @@ type PurchaseRpcRow = {
   user_esim_id: string;
 };
 
+type PurchaseError = {
+  code?: string;
+  message?: string;
+};
+
 const planSelect = `
   id,
   title,
@@ -58,10 +63,23 @@ export async function createDemoPurchase(
     .single();
 
   if (purchaseResult.error || !purchaseResult.data) {
-    return { data: null, error: purchaseResult.error };
+    const error = purchaseResult.error as PurchaseError | null;
+
+    return {
+      data: null,
+      error:
+        error?.code === "PGRST202"
+          ? new Error("Purchase RPC is missing. Apply the latest Supabase migrations.")
+          : purchaseResult.error,
+    };
   }
 
-  const purchase = purchaseResult.data as PurchaseRpcRow;
+  const purchaseData = purchaseResult.data as PurchaseRpcRow | PurchaseRpcRow[];
+  const purchase = Array.isArray(purchaseData) ? purchaseData[0] : purchaseData;
+
+  if (!purchase?.order_id || !purchase.user_esim_id) {
+    return { data: null, error: new Error("Purchase response was invalid") };
+  }
 
   return {
     data: {

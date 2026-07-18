@@ -392,7 +392,6 @@ Status: Designed
 Sections:
 
 * Selected Plan
-* Traveler Information
 * Promo Code
 * Payment Method
 * Order Summary
@@ -405,6 +404,7 @@ Complete Purchase
 Behavior:
 
 * Signed-in checkout creates a persisted paid order and ready eSIM that appears in My eSIMs.
+* Buyer name/email come from the signed-in Google account.
 
 ---
 

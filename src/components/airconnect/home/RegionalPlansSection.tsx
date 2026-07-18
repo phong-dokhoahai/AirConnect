@@ -4,7 +4,13 @@ import { Pressable, Text, View } from "react-native";
 import { SectionHeader } from "./SectionHeader";
 import type { RegionalPlan } from "./types";
 
-export function RegionalPlansSection({ plans }: { plans: RegionalPlan[] }) {
+export function RegionalPlansSection({
+  plans,
+  onViewDetails,
+}: {
+  plans: RegionalPlan[];
+  onViewDetails: (planId: string) => void;
+}) {
   return (
     <View className="px-6 mt-6">
       <SectionHeader title="Regional Plans" />
@@ -15,6 +21,7 @@ export function RegionalPlansSection({ plans }: { plans: RegionalPlan[] }) {
             key={item.id}
             style={{ width: "48%" }}
             className="bg-white rounded-3xl p-4 border border-[#F3F4F6]"
+            onPress={() => onViewDetails(item.planId ?? item.id)}
           >
             <CustomLinearGradient
               colors={item.colors}

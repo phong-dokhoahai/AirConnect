@@ -19,6 +19,7 @@ type CountryRow = {
   name: string;
   iso2: string;
   iso3?: string | null;
+  display_emoji?: string | null;
 };
 
 type RegionRow = {
@@ -26,6 +27,9 @@ type RegionRow = {
   name: string;
   slug: string;
   description?: string | null;
+  display_icon?: string | null;
+  gradient_start?: string | null;
+  gradient_end?: string | null;
   region_countries?: { countries?: CountryRow | CountryRow[] | null }[] | null;
 };
 
@@ -60,6 +64,8 @@ type CatalogPlanRow = {
   is_unlimited: boolean;
   validity_days: number;
   price: number | string;
+  original_price?: number | string | null;
+  discount_percent?: number | null;
   currency: string;
   provider_name: string;
   activation_policy: string;
@@ -81,27 +87,6 @@ export type CatalogData = {
 export type CatalogApiResponse = {
   data: CatalogData | null;
   error: string | null;
-};
-
-const regionPresentation: Record<
-  string,
-  { icon: string; colors: readonly [string, string] }
-> = {
-  asia: { icon: "\uD83C\uDF0F", colors: ["#FB923C", "#EC4899"] },
-  europe: { icon: "\uD83C\uDFF0", colors: ["#60A5FA", "#8B5CF6"] },
-  global: { icon: "\uD83C\uDF0D", colors: ["#A78BFA", "#EC4899"] },
-};
-
-const destinationImages: Record<string, string> = {
-  JP: "\uD83C\uDFEF",
-  TH: "\uD83C\uDFDD\uFE0F",
-  VN: "\uD83C\uDF3E",
-  SG: "\uD83C\uDF03",
-  KR: "\uD83C\uDFD9\uFE0F",
-  US: "\uD83D\uDDFD",
-  FR: "\uD83D\uDDFC",
-  ES: "\uD83C\uDFD6\uFE0F",
-  IT: "\uD83C\uDFF0",
 };
 
 function getErrorMessage(error: QueryError | null | undefined) {
@@ -214,7 +199,7 @@ function mapPopularDestinations(
       name: country.name,
       flag: flagFromIso2(iso2),
       price: plan ? formatPrice(plan.price, plan.currency) : "Check plans",
-      image: destinationImages[iso2] ?? "\uD83C\uDF0D",
+      image: country.display_emoji ?? "\uD83C\uDF0D",
     };
   });
 }
@@ -225,20 +210,21 @@ function mapRegionalPlans(
 ): RegionalPlan[] {
   return regions.map((region) => {
     const plan = getLowestPriceForRegion(region, plans);
-    const presentation = regionPresentation[region.slug] ?? {
-      icon: "\uD83D\uDDFA\uFE0F",
-      colors: ["#4ADE80", "#14B8A6"] as const,
-    };
+    const colors: readonly [string, string] =
+      region.gradient_start && region.gradient_end
+        ? [region.gradient_start, region.gradient_end]
+        : ["#4ADE80", "#14B8A6"];
 
     return {
       id: region.slug,
+      planId: plan?.id,
       name: region.name,
       countries: (region.region_countries ?? []).flatMap((entry) =>
         rows(entry.countries),
       ).length,
       price: plan ? formatPrice(plan.price, plan.currency) : "Check plans",
-      icon: presentation.icon,
-      colors: presentation.colors,
+      icon: region.display_icon ?? "\uD83D\uDDFA\uFE0F",
+      colors,
     };
   });
 }
@@ -248,8 +234,8 @@ function mapFeaturedPlans(plans: CatalogPlanRow[]): FeaturedPlan[] {
     const [country] = getPlanCountries(plan);
     const [region] = getPlanRegions(plan);
     const displayName = country?.name ?? region?.name ?? plan.title;
-    const price = toNumber(plan.price);
-    const originalPrice = price > 0 ? price * 1.25 : price;
+    const discountPercent = plan.discount_percent ?? 0;
+    const originalPrice = toNumber(plan.original_price);
 
     return {
       id: plan.id,
@@ -259,8 +245,11 @@ function mapFeaturedPlans(plans: CatalogPlanRow[]): FeaturedPlan[] {
       validity: formatValidity(plan.validity_days),
       network: getNetworkLabel(plan),
       price: formatPrice(plan.price, plan.currency),
-      originalPrice: formatPrice(originalPrice, plan.currency),
-      savings: "20%",
+      originalPrice:
+        originalPrice > toNumber(plan.price)
+          ? formatPrice(originalPrice, plan.currency)
+          : undefined,
+      savings: discountPercent > 0 ? `${discountPercent}%` : undefined,
     };
   });
 }

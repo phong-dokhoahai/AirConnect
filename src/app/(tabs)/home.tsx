@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import {
-  ActiveEsimCard,
   HomeHeader,
   PopularDestinationsSection,
   PromoBanner,
@@ -124,7 +123,6 @@ export default function HomeRoute() {
           onSearchChange={setSearch}
         />
         <PromoBanner />
-        <ActiveEsimCard onViewDetails={() => viewPlanDetails("1")} />
 
         {isCatalogLoading ? (
           <View className="mx-6 mt-6 rounded-2xl border border-[#F3F4F6] bg-white p-4">
@@ -151,7 +149,10 @@ export default function HomeRoute() {
         <PopularDestinationsSection
           destinations={catalog.popularDestinations}
         />
-        <RegionalPlansSection plans={catalog.regionalPlans} />
+        <RegionalPlansSection
+          plans={catalog.regionalPlans}
+          onViewDetails={viewPlanDetails}
+        />
         <RecommendedPlansSection
           favorites={favorites}
           plans={catalog.featuredPlans}

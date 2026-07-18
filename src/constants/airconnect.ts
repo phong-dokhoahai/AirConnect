@@ -220,23 +220,3 @@ export const esims: ESIM[] = [
     supportedNetworks: ["AIS", "TrueMove H", "dtac"],
   },
 ];
-
-export const user = {
-  name: "John Smith",
-  email: "johnsmith@email.com",
-  phone: "+1 (415) 555-0192",
-  avatar: "JS",
-  tier: "Explorer",
-  points: 4250,
-  nextTierPoints: 6000,
-  nextTier: "Adventurer",
-  memberSince: "May 2026",
-};
-
-export const countries = [
-  { id: "japan", name: "Japan", flag: "🇯🇵" },
-  { id: "thailand", name: "Thailand", flag: "🇹🇭" },
-  { id: "south-korea", name: "South Korea", flag: "🇰🇷" },
-  { id: "singapore", name: "Singapore", flag: "🇸🇬" },
-  { id: "vietnam", name: "Vietnam", flag: "🇻🇳" },
-];

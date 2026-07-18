@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export async function getCountries() {
   return supabase
     .from('countries')
-    .select('id, name, iso2, iso3')
+    .select('id, name, iso2, iso3, display_emoji')
     .order('name', { ascending: true });
 }
 
@@ -16,11 +16,15 @@ export async function getRegions() {
       name,
       slug,
       description,
+      display_icon,
+      gradient_start,
+      gradient_end,
       region_countries (
         countries (
           id,
           name,
-          iso2
+          iso2,
+          display_emoji
         )
       )
     `,
@@ -41,6 +45,8 @@ export async function getActiveCatalogPlans() {
       usage_tier,
       validity_days,
       price,
+      original_price,
+      discount_percent,
       currency,
       provider_name,
       activation_policy,
@@ -52,7 +58,8 @@ export async function getActiveCatalogPlans() {
           id,
           name,
           iso2,
-          iso3
+          iso3,
+          display_emoji
         )
       ),
       plan_regions (
@@ -60,7 +67,10 @@ export async function getActiveCatalogPlans() {
           id,
           name,
           slug,
-          description
+          description,
+          display_icon,
+          gradient_start,
+          gradient_end
         )
       ),
       plan_networks (
@@ -99,6 +109,8 @@ export async function getActiveRecommendationPlans() {
       usage_tier,
       validity_days,
       price,
+      original_price,
+      discount_percent,
       currency,
       provider_name,
       activation_policy,

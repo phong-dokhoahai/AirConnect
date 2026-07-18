@@ -8,6 +8,7 @@ export type PopularDestination = {
 
 export type RegionalPlan = {
   id: string;
+  planId?: string;
   name: string;
   countries: number;
   price: string;
@@ -23,6 +24,6 @@ export type FeaturedPlan = {
   validity: string;
   network: string;
   price: string;
-  originalPrice: string;
-  savings: string;
+  originalPrice?: string;
+  savings?: string;
 };

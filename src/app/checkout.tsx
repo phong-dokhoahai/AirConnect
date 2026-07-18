@@ -72,8 +72,6 @@ export default function CheckoutRoute() {
   const [selectedPayment, setSelectedPayment] = useState("card");
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [purchasePending, setPurchasePending] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchaseNotice, setPurchaseNotice] = useState<{
@@ -120,6 +118,8 @@ export default function CheckoutRoute() {
   const taxes = 0.5;
   const total = Math.max(0, planPrice - discount + taxes);
   const display = plan ? getPlanDisplay(plan) : null;
+  const travelerName =
+    profileUser?.name || profileEmail.split("@")[0] || "AirConnect Traveler";
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : "Something went wrong.";
@@ -141,13 +141,10 @@ export default function CheckoutRoute() {
   const handleCompletePurchase = async () => {
     if (!plan || !authUser || purchasePending) return;
 
-    const purchaseFullName = fullName.trim() || profileUser?.name || "";
-    const purchaseEmail = email.trim() || profileEmail;
-
-    if (!purchaseFullName || !purchaseEmail) {
-      setPurchaseError("Please fill in all required fields.");
+    if (!profileEmail) {
+      setPurchaseError("Your account email is required to complete purchase.");
       setPurchaseNotice({
-        message: "Please fill in all required fields.",
+        message: "Your account email is required to complete purchase.",
         variant: "error",
       });
       return;
@@ -159,8 +156,8 @@ export default function CheckoutRoute() {
 
     try {
       const { data, error } = await createDemoPurchase(authUser.id, plan, {
-        fullName: purchaseFullName,
-        email: purchaseEmail,
+        fullName: travelerName,
+        email: profileEmail,
         paymentMethod: selectedPayment,
         discountAmount: discount,
         taxAmount: taxes,
@@ -312,45 +309,6 @@ export default function CheckoutRoute() {
                 {formatMoney(planPrice, plan.currency)}
               </Text>
             </View>
-          </View>
-        </View>
-
-        <View className="mt-6 px-6">
-          <Text className="mb-3 text-lg font-semibold text-gray-900">
-            Traveler Information
-          </Text>
-
-          <View className="rounded-2xl border border-gray-100 bg-white p-5">
-            <Text className="mb-2 text-sm font-medium text-gray-700">
-              Full Name <Text className="text-red-500">*</Text>
-            </Text>
-
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder={profileUser?.name ?? "Full name"}
-              placeholderTextColor="#9CA3AF"
-              className="mb-4 rounded-xl bg-gray-50 px-4 py-3 text-gray-900"
-            />
-
-            <Text className="mb-2 text-sm font-medium text-gray-700">
-              Email Address <Text className="text-red-500">*</Text>
-            </Text>
-
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder={profileEmail || "email@example.com"}
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              className="rounded-xl bg-gray-50 px-4 py-3 text-gray-900"
-            />
-
-            <Text className="mt-2 text-xs text-gray-500">
-              Your eSIM QR code and activation details will be sent to this
-              email.
-            </Text>
           </View>
         </View>
 

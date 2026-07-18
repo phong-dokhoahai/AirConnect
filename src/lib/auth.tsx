@@ -26,7 +26,7 @@ type AuthContextValue = {
   initializing: boolean;
   signingIn: boolean;
   error: string | null;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<Session | null>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
@@ -73,17 +73,19 @@ export function getOAuthCallbackCodeFromParams(params: URLSearchParams) {
 
 export async function exchangeOAuthCallbackCode(code: string) {
   if (exchangedAuthCodes.has(code)) {
-    return;
+    return null;
   }
 
   exchangedAuthCodes.add(code);
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     exchangedAuthCodes.delete(code);
     throw error;
   }
+
+  return data.session;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -154,10 +156,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.type === 'success') {
         const authCode = getOAuthCallbackCode(result.url);
-        await exchangeOAuthCallbackCode(authCode);
+        const nextSession = await exchangeOAuthCallbackCode(authCode);
+
+        if (nextSession) {
+          setSession(nextSession);
+        }
+
+        return nextSession;
       }
+
+      return null;
     } catch (authError) {
       setError(getErrorMessage(authError));
+      return null;
     } finally {
       setSigningIn(false);
     }

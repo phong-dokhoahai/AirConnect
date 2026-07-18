@@ -13,10 +13,18 @@ import {
   Wifi,
   Zap,
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
-import { plans } from "@/constants/airconnect";
+import { useAuth } from "@/lib/auth";
+import { getPlanDetails } from "@/lib/catalogQueries";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -92,13 +100,194 @@ const relatedPlans = [
   },
 ];
 
+type CountryRow = {
+  id: string;
+  name: string;
+  iso2: string;
+  iso3?: string | null;
+};
+
+type RegionRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+};
+
+type PlanDetails = {
+  id: string;
+  title: string;
+  description?: string | null;
+  data_amount_gb?: number | string | null;
+  is_unlimited: boolean;
+  validity_days: number;
+  price: number | string;
+  original_price?: number | string | null;
+  discount_percent?: number | null;
+  currency: string;
+  provider_name: string;
+  activation_policy: string;
+  tethering_supported: boolean;
+  supports_5g: boolean;
+  plan_countries?: { countries?: CountryRow | CountryRow[] | null }[] | null;
+  plan_regions?: { regions?: RegionRow | RegionRow[] | null }[] | null;
+  plan_networks?: {
+    id?: string;
+    network_name: string;
+    coverage_note?: string | null;
+    network_type: string;
+    countries?: Pick<CountryRow, "id" | "name" | "iso2"> | null;
+  }[] | null;
+  plan_features?: {
+    id?: string;
+    icon: string;
+    label: string;
+    sort_order: number;
+  }[] | null;
+};
+
+function rows<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function toNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined) return 0;
+  return typeof value === "number" ? value : Number(value);
+}
+
+function formatPrice(value: number | string, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(toNumber(value));
+}
+
+function formatData(plan: PlanDetails) {
+  if (plan.is_unlimited) return "Unlimited";
+
+  const amount = toNumber(plan.data_amount_gb);
+  return `${Number.isInteger(amount) ? amount : amount.toFixed(2)}GB`;
+}
+
+function formatValidity(days: number) {
+  return `${days} ${days === 1 ? "Day" : "Days"}`;
+}
+
+function flagFromIso2(iso2: string | null | undefined) {
+  const normalizedIso2 = iso2?.trim().toUpperCase();
+
+  if (!normalizedIso2 || normalizedIso2.length !== 2) return "\uD83C\uDF0D";
+
+  return normalizedIso2
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+}
+
+function getNetworkLabel(plan: PlanDetails) {
+  const networkTypes = new Set(
+    (plan.plan_networks ?? [])
+      .map((network) => network.network_type)
+      .filter(Boolean),
+  );
+
+  if (plan.supports_5g || networkTypes.has("5G")) return "5G";
+  if (networkTypes.has("LTE")) return "LTE";
+  return "4G";
+}
+
 export default function PlanDetailRoute() {
   const router = useRouter();
+  const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
   const { id = "1" } = useLocalSearchParams<{ id?: string }>();
-  const plan = plans.find((item) => item.id === id) ?? plans[0];
 
+  const [plan, setPlan] = useState<PlanDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPlan() {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const { data, error } = await getPlanDetails(id);
+
+        if (!isMounted) return;
+
+        if (error || !data) {
+          console.error("Plan details load failed", error);
+          setPlan(null);
+          setLoadError("Unable to load this plan.");
+        } else {
+          setPlan(data as unknown as PlanDetails);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("Plan details load failed", error);
+        setPlan(null);
+        setLoadError("Unable to load this plan.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadPlan();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const [country] =
+    plan?.plan_countries?.flatMap((entry) => rows(entry.countries)) ?? [];
+  const [region] =
+    plan?.plan_regions?.flatMap((entry) => rows(entry.regions)) ?? [];
+  const destinationName = country?.name ?? region?.name ?? plan?.title ?? "Plan";
+  const destinationFlag = country ? flagFromIso2(country.iso2) : "\uD83C\uDF0D";
+  const dataLabel = plan ? formatData(plan) : "-";
+  const validityLabel = plan ? formatValidity(plan.validity_days) : "-";
+  const networkLabel = plan ? getNetworkLabel(plan) : "-";
+  const priceLabel = plan ? formatPrice(plan.price, plan.currency) : "-";
+  const originalPrice = plan ? toNumber(plan.original_price) : 0;
+  const originalPriceLabel =
+    plan && originalPrice > toNumber(plan.price)
+      ? formatPrice(originalPrice, plan.currency)
+      : null;
+  const savingsLabel =
+    plan && (plan.discount_percent ?? 0) > 0
+      ? `Save ${plan.discount_percent}%`
+      : null;
+  const perGbLabel =
+    plan && !plan.is_unlimited && toNumber(plan.data_amount_gb) > 0
+      ? formatPrice(
+          toNumber(plan.price) / toNumber(plan.data_amount_gb),
+          plan.currency,
+        )
+      : "-";
+  const networkRows = plan?.plan_networks?.length
+    ? plan.plan_networks.map((network) => ({
+        name: network.network_name,
+        coverage: network.coverage_note ?? network.countries?.name ?? "Coverage",
+        quality: network.network_type,
+      }))
+    : networks;
+  const includedFeatures = plan?.plan_features?.length
+    ? [...plan.plan_features]
+        .sort((first, second) => first.sort_order - second.sort_order)
+        .map((feature) => feature.label)
+    : features.map((feature) => feature.label);
+  const detailRows = [
+    ["Data", dataLabel],
+    ["Validity", validityLabel],
+    ["Activation Policy", plan?.activation_policy ?? "-"],
+    ["Speed", networkLabel],
+  ];
 
   const toggleFaq = (index: number) => {
     setExpandedFaq(expandedFaq === index ? null : index);
@@ -108,7 +297,15 @@ export default function PlanDetailRoute() {
     Alert.alert("Share", "Share functionality coming soon!");
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    if (!plan) return;
+
+    if (!authUser) {
+      const session = await signInWithGoogle();
+
+      if (!session) return;
+    }
+
     router.push({ pathname: "/checkout", params: { planId: plan.id } });
   };
 
@@ -165,6 +362,29 @@ export default function PlanDetailRoute() {
         contentContainerStyle={{ paddingBottom: 220 }}
         showsVerticalScrollIndicator={false}
       >
+        {isLoading ? (
+          <View className="px-6 pt-28">
+            <View className="items-center rounded-2xl border border-[#F3F4F6] bg-white p-5">
+              <ActivityIndicator color="#7B61FF" />
+              <Text className="mt-3 text-sm font-medium text-[#4B5563]">
+                Loading plan...
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {!isLoading && loadError ? (
+          <View className="px-6 pt-28">
+            <View className="rounded-2xl border border-[#FEE2E2] bg-white p-5">
+              <Text className="text-sm font-semibold text-[#991B1B]">
+                {loadError}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {plan ? (
+          <>
         <CustomLinearGradient
           colors={["#5B8DEF", "#7B61FF"]}
           style={{
@@ -197,23 +417,29 @@ export default function PlanDetailRoute() {
           </View>
 
           <View className="absolute bottom-6 left-6 right-6">
-            <Text style={{ fontSize: 72, marginBottom: 12 }}>🇯🇵</Text>
-            <Text className="text-3xl font-bold text-white">Japan</Text>
+            <Text style={{ fontSize: 72, marginBottom: 12 }}>
+              {destinationFlag}
+            </Text>
+            <Text className="text-3xl font-bold text-white">
+              {destinationName}
+            </Text>
           </View>
         </CustomLinearGradient>
 
         <View className="px-6 -mt-8 z-10">
           <View className="bg-white rounded-3xl p-6 border border-[#F3F4F6]">
-            <View className="absolute top-4 right-4 px-3 py-1.5 bg-[#ECFDF5] rounded-full">
-              <Text className="text-[#15803D] text-xs font-semibold">
-                Save 25%
-              </Text>
-            </View>
+            {savingsLabel ? (
+              <View className="absolute top-4 right-4 px-3 py-1.5 bg-[#ECFDF5] rounded-full">
+                <Text className="text-[#15803D] text-xs font-semibold">
+                  {savingsLabel}
+                </Text>
+              </View>
+            ) : null}
 
             <View className="flex-row mb-6">
               <View className="flex-1 items-center">
                 <Text className="text-2xl font-bold text-[#111827] mb-1">
-                  10GB
+                  {dataLabel}
                 </Text>
 
                 <Text className="text-xs text-[#4B5563]">Data</Text>
@@ -221,7 +447,7 @@ export default function PlanDetailRoute() {
 
               <View className="flex-1 items-center border-x border-[#E5E7EB]">
                 <Text className="text-2xl font-bold text-[#111827] mb-1">
-                  15 Days
+                  {validityLabel}
                 </Text>
 
                 <Text className="text-xs text-[#4B5563]">Validity</Text>
@@ -229,7 +455,7 @@ export default function PlanDetailRoute() {
 
               <View className="flex-1 items-center">
                 <Text className="text-2xl font-bold text-[#7B61FF] mb-1">
-                  5G
+                  {networkLabel}
                 </Text>
 
                 <Text className="text-xs text-[#4B5563]">Network</Text>
@@ -242,12 +468,14 @@ export default function PlanDetailRoute() {
 
                 <View className="flex-row items-baseline">
                   <Text className="text-3xl font-bold text-[#111827] mr-2">
-                    $8.99
+                    {priceLabel}
                   </Text>
 
-                  <Text className="text-lg text-[#9CA3AF] line-through">
-                    $11.99
-                  </Text>
+                  {originalPriceLabel ? (
+                    <Text className="text-lg text-[#9CA3AF] line-through">
+                      {originalPriceLabel}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
@@ -255,7 +483,7 @@ export default function PlanDetailRoute() {
                 <Text className="text-xs text-[#4B5563] mb-1">Per GB</Text>
 
                 <Text className="text-lg font-semibold text-[#7B61FF]">
-                  $0.90
+                  {perGbLabel}
                 </Text>
               </View>
             </View>
@@ -268,21 +496,25 @@ export default function PlanDetailRoute() {
           </Text>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {features.map(({ icon: Icon, label, color }) => (
-              <View
-                key={label}
-                style={{ width: "48%" }}
-                className="bg-white rounded-2xl p-4 border border-[#F3F4F6]"
-              >
-                <View className="w-10 h-10 rounded-xl bg-[#F5F0FF] items-center justify-center mb-3">
-                  <Icon size={20} color={color} />
-                </View>
+            {includedFeatures.map((label, index) => {
+              const { icon: Icon, color } = features[index % features.length];
 
-                <Text className="text-sm font-medium text-[#111827]">
-                  {label}
-                </Text>
-              </View>
-            ))}
+              return (
+                <View
+                  key={label}
+                  style={{ width: "48%" }}
+                  className="bg-white rounded-2xl p-4 border border-[#F3F4F6]"
+                >
+                  <View className="w-10 h-10 rounded-xl bg-[#F5F0FF] items-center justify-center mb-3">
+                    <Icon size={20} color={color} />
+                  </View>
+
+                  <Text className="text-sm font-medium text-[#111827]">
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -292,7 +524,7 @@ export default function PlanDetailRoute() {
           </Text>
 
           <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
-            {networks.map((network, index) => (
+            {networkRows.map((network, index) => (
               <View key={network.name}>
                 {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
 
@@ -328,12 +560,7 @@ export default function PlanDetailRoute() {
           </Text>
 
           <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
-            {[
-              ["Data", "10GB"],
-              ["Validity", "15 Days"],
-              ["Activation Policy", "On First Use"],
-              ["Speed", "5G / 4G LTE"],
-            ].map(([label, value], index) => (
+            {detailRows.map(([label, value], index) => (
               <View key={label}>
                 {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
 
@@ -352,7 +579,7 @@ export default function PlanDetailRoute() {
               <View className="flex-row items-center">
                 <Check size={16} color="#16A34A" />
                 <Text className="font-semibold text-[#16A34A] ml-1">
-                  Enabled
+                  {plan.tethering_supported ? "Enabled" : "Disabled"}
                 </Text>
               </View>
             </View>
@@ -399,7 +626,7 @@ export default function PlanDetailRoute() {
         <View className="mt-6 mb-6">
           <View className="px-6 mb-4">
             <Text className="text-xl font-semibold text-[#111827]">
-              More Plans for Japan
+              More Plans for {destinationName}
             </Text>
           </View>
 
@@ -443,20 +670,34 @@ export default function PlanDetailRoute() {
             ))}
           </ScrollView>
         </View>
+          </>
+        ) : null}
       </ScrollView>
 
       <View className="border-t border-[#E5E7EB] bg-white px-6 py-4">
         <View className="flex-row items-center justify-between mb-4">
           <View>
             <Text className="text-sm text-[#4B5563]">Total Price</Text>
-            <Text className="text-2xl font-bold text-[#111827]">$8.99</Text>
+            <Text className="text-2xl font-bold text-[#111827]">
+              {priceLabel}
+            </Text>
           </View>
 
-          <View className="items-end">
-            <Text className="text-xs text-[#16A34A] font-medium">Save 25%</Text>
+          {savingsLabel || originalPriceLabel ? (
+            <View className="items-end">
+              {savingsLabel ? (
+                <Text className="text-xs text-[#16A34A] font-medium">
+                  {savingsLabel}
+                </Text>
+              ) : null}
 
-            <Text className="text-sm text-[#9CA3AF] line-through">$11.99</Text>
-          </View>
+              {originalPriceLabel ? (
+                <Text className="text-sm text-[#9CA3AF] line-through">
+                  {originalPriceLabel}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View className="flex-row">
@@ -469,7 +710,12 @@ export default function PlanDetailRoute() {
 
           <Pressable
             onPress={handleBuyNow}
-            className="flex-1 py-3.5 bg-[#7B61FF] rounded-2xl items-center"
+            disabled={!plan || initializing || signingIn}
+            className={`flex-1 py-3.5 rounded-2xl items-center ${
+              !plan || initializing || signingIn
+                ? "bg-gray-300"
+                : "bg-[#7B61FF]"
+            }`}
           >
             <Text className="text-white font-medium">Buy Now</Text>
           </Pressable>
