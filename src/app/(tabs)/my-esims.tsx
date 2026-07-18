@@ -5,13 +5,21 @@ import {
   Bell,
   Calendar,
   ChevronRight,
+  Globe,
   Search,
   Signal,
   Smartphone,
   Wifi,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -20,8 +28,19 @@ import Animated, {
   LinearTransition,
 } from "react-native-reanimated";
 
+import { Flag } from "@/components/airconnect/ui";
+import { getProfileUser } from "@/features/profile/utils";
+import { useAuth } from "@/lib/auth";
+import {
+  getPlanDisplay,
+  toNumber,
+  type PlanDisplayRow,
+} from "@/lib/planDisplay";
+import { getUserEsims } from "@/lib/purchaseQueries";
+
 interface ESIMCard {
   id: string;
+  planId: string;
   flag: string;
   country: string;
   planName: string;
@@ -37,58 +56,18 @@ interface ESIMCard {
   network: string;
 }
 
+type UserEsimRow = {
+  id: string;
+  order_id: string;
+  status: string;
+  data_used_gb: number | string;
+  expires_at: string | null;
+  created_at: string;
+  esim_plans?: PlanDisplayRow | PlanDisplayRow[] | null;
+};
+
 type FilterType = "all" | "active" | "ready" | "expired";
 
-const esims: ESIMCard[] = [
-  {
-    id: "1",
-    flag: "🇯🇵",
-    country: "Japan",
-    planName: "Standard Plan",
-    data: "10GB",
-    days: "30 Days",
-    status: "active",
-    dataUsed: 2.8,
-    dataTotal: 10,
-    dataUnit: "GB",
-    daysRemaining: 18,
-    daysTotal: 30,
-    expiryDate: "Jun 28, 2026",
-    network: "5G",
-  },
-  {
-    id: "2",
-    flag: "🇪🇺",
-    country: "Europe",
-    planName: "Premium Plan",
-    data: "20GB",
-    days: "60 Days",
-    status: "ready",
-    dataUsed: 0,
-    dataTotal: 20,
-    dataUnit: "GB",
-    daysRemaining: 60,
-    daysTotal: 60,
-    expiryDate: "Aug 9, 2026",
-    network: "4G/5G",
-  },
-  {
-    id: "3",
-    flag: "🇹🇭",
-    country: "Thailand",
-    planName: "Unlimited Plan",
-    data: "Unlimited",
-    days: "7 Days",
-    status: "expired",
-    dataUsed: 100,
-    dataTotal: 100,
-    dataUnit: "%",
-    daysRemaining: 0,
-    daysTotal: 7,
-    expiryDate: "May 15, 2026",
-    network: "4G",
-  },
-];
 
 const filters: { key: FilterType; label: string }[] = [
   { key: "all", label: "All" },
@@ -96,6 +75,78 @@ const filters: { key: FilterType; label: string }[] = [
   { key: "ready", label: "Ready to Install" },
   { key: "expired", label: "Expired" },
 ];
+
+function firstRow<T>(value: T | T[] | null | undefined) {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Not started";
+
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getDaysRemaining(value: string | null) {
+  if (!value) return 0;
+
+  const diff = new Date(value).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 86_400_000));
+}
+
+function normalizeStatus(
+  status: string,
+  expiresAt: string | null,
+): ESIMCard["status"] {
+  if (status === "expired") return "expired";
+
+  if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+    return "expired";
+  }
+
+  return status === "active" ? "active" : "ready";
+}
+
+function toCard(row: UserEsimRow): ESIMCard | null {
+  const plan = firstRow(row.esim_plans);
+
+  if (!plan) return null;
+
+  const display = getPlanDisplay(plan);
+  const status = normalizeStatus(row.status, row.expires_at);
+  const isUnlimited = plan.is_unlimited;
+  const dataTotal = isUnlimited ? 100 : toNumber(plan.data_amount_gb);
+  const dataUsed = isUnlimited
+    ? 0
+    : Math.min(toNumber(row.data_used_gb), dataTotal);
+
+  return {
+    id: row.id,
+    planId: plan.id,
+    flag: display.flag,
+    country: display.name,
+    planName: plan.title,
+    data: display.data,
+    days: display.validity,
+    status,
+    dataUsed,
+    dataTotal,
+    dataUnit: isUnlimited ? "%" : "GB",
+    daysRemaining:
+      status === "ready" && !row.expires_at
+        ? plan.validity_days
+        : status === "expired"
+          ? 0
+          : getDaysRemaining(row.expires_at),
+    daysTotal: plan.validity_days,
+    expiryDate: formatDate(row.expires_at),
+    network: display.network,
+  };
+}
 
 function StatusBadge({ status }: { status: ESIMCard["status"] }) {
   if (status === "active") {
@@ -201,7 +252,7 @@ function ESIMCardItem({
 }: {
   esim: ESIMCard;
   index: number;
-  onViewDetails?: (id: string) => void;
+  onViewDetails?: (esim: ESIMCard) => void;
 }) {
   const borderColor =
     esim.status === "active"
@@ -231,7 +282,7 @@ function ESIMCardItem({
 
       <View className="p-5">
         <View className="flex-row items-center mb-4">
-          <Text style={{ fontSize: 36, lineHeight: 42 }}>{esim.flag}</Text>
+          <Flag value={esim.flag} />
 
           <View className="flex-1 ml-3">
             <View className="flex-row items-center mb-0.5">
@@ -298,7 +349,7 @@ function ESIMCardItem({
           </View>
 
           <Pressable
-            onPress={() => onViewDetails?.(esim.id)}
+            onPress={() => onViewDetails?.(esim)}
             className="flex-row items-center ml-3"
           >
             <Text className="text-xs font-semibold text-[#6915E0]">
@@ -368,8 +419,76 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
 
 export default function MyESIMsRoute() {
   const router = useRouter();
+  const {
+    user: authUser,
+    initializing,
+    signingIn,
+    error,
+    signInWithGoogle,
+  } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [esims, setEsims] = useState<ESIMCard[]>([]);
+  const [isEsimsLoading, setIsEsimsLoading] = useState(Boolean(authUser));
+  const [hasLoadedEsims, setHasLoadedEsims] = useState(false);
+  const [esimsError, setEsimsError] = useState<string | null>(null);
+  const loadRequestId = React.useRef(0);
+
+  const loadEsims = React.useCallback(async () => {
+    const requestId = loadRequestId.current + 1;
+    loadRequestId.current = requestId;
+
+    if (!authUser) {
+      setEsims([]);
+      setIsEsimsLoading(false);
+      setHasLoadedEsims(false);
+      return;
+    }
+
+    setIsEsimsLoading(true);
+    setHasLoadedEsims(false);
+    setEsimsError(null);
+
+    try {
+      const { data, error } = await getUserEsims(authUser.id);
+
+      if (requestId !== loadRequestId.current) return;
+
+      if (error) {
+        console.error("My eSIMs load failed", error);
+        setEsimsError(error.message);
+        setEsims([]);
+        return;
+      }
+
+      setEsims(
+        ((data ?? []) as unknown as UserEsimRow[])
+          .map(toCard)
+          .filter((card): card is ESIMCard => Boolean(card)),
+      );
+    } catch (error) {
+      if (requestId !== loadRequestId.current) return;
+
+      console.error("My eSIMs load failed", error);
+      setEsimsError(
+        error instanceof Error ? error.message : "Something went wrong",
+      );
+      setEsims([]);
+    } finally {
+      if (requestId === loadRequestId.current) {
+        setIsEsimsLoading(false);
+        setHasLoadedEsims(true);
+      }
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadEsims();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [loadEsims]);
 
   const filtered = useMemo(() => {
     return esims.filter((e) => {
@@ -386,9 +505,75 @@ export default function MyESIMsRoute() {
 
       return matchFilter && matchSearch;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, esims, searchQuery]);
 
   const activeCount = esims.filter((e) => e.status === "active").length;
+
+  if (initializing) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#F9FAFB] px-6">
+        <ActivityIndicator color="#6915E0" />
+        <Text className="mt-3 text-sm font-medium text-[#6B7280]">
+          Checking sign in...
+        </Text>
+      </View>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <View className="flex-1 bg-[#F9FAFB]">
+        <View className="bg-white px-6 pt-14 pb-5">
+          <Text className="font-bold text-[#111827] text-[26px]">
+            My eSIMs
+          </Text>
+          <Text className="text-sm text-[#6B7280] mt-0.5">
+            Sign in to view your purchased eSIMs
+          </Text>
+        </View>
+
+        <View className="flex-1 justify-center px-6">
+          <View className="rounded-3xl bg-white p-6 border border-[#F3F4F6]">
+            <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl bg-[#F5F0FF]">
+              <Smartphone size={28} color="#6915E0" />
+            </View>
+
+            <Text className="text-2xl font-bold text-[#111827]">
+              Sign in to manage eSIMs
+            </Text>
+            <Text className="mt-2 text-sm leading-5 text-[#6B7280]">
+              Use Google to access your active, ready, and expired eSIM plans.
+            </Text>
+
+            {error ? (
+              <Text className="mt-4 text-sm font-medium text-red-600">
+                {error}
+              </Text>
+            ) : null}
+
+            <Pressable
+              disabled={signingIn}
+              onPress={() => void signInWithGoogle()}
+              className={`mt-6 flex-row items-center justify-center rounded-2xl bg-[#6915E0] px-5 py-4 ${
+                signingIn ? "opacity-70" : ""
+              }`}
+            >
+              {signingIn ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Globe size={20} color="#FFFFFF" />
+              )}
+              <Text className="ml-3 text-base font-bold text-white">
+                {signingIn ? "Opening Google..." : "Continue with Google"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const profileUser = getProfileUser(authUser);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">
@@ -423,7 +608,9 @@ export default function MyESIMsRoute() {
                 justifyContent: "center",
               }}
             >
-              <Text className="text-white font-bold text-sm">J</Text>
+              <Text className="text-white font-bold text-sm">
+                {profileUser.avatar}
+              </Text>
             </CustomLinearGradient>
           </View>
         </View>
@@ -500,14 +687,39 @@ export default function MyESIMsRoute() {
         </ScrollView>
 
         <View className="px-6">
-          {filtered.length > 0 ? (
+          {isEsimsLoading || !hasLoadedEsims ? (
+            <View className="items-center py-12">
+              <ActivityIndicator color="#6915E0" />
+              <Text className="mt-3 text-sm font-medium text-[#6B7280]">
+                Loading eSIMs...
+              </Text>
+            </View>
+          ) : esimsError ? (
+            <View className="items-center py-12">
+              <Text className="text-center text-sm font-medium text-red-600">
+                {esimsError}
+              </Text>
+              <Pressable
+                onPress={loadEsims}
+                className="mt-4 rounded-2xl bg-[#6915E0] px-5 py-3"
+              >
+                <Text className="font-bold text-white">Retry</Text>
+              </Pressable>
+            </View>
+          ) : filtered.length > 0 ? (
             filtered.map((esim, index) => (
               <ESIMCardItem
                 key={esim.id}
                 esim={esim}
                 index={index}
-                onViewDetails={(id) => {
-                  router.push({ pathname: "/esim-details", params: { id } });
+                onViewDetails={(selectedEsim) => {
+                  router.push({
+                    pathname: "/esim-details",
+                    params: {
+                      id: selectedEsim.planId,
+                      userEsimId: selectedEsim.id,
+                    },
+                  });
                 }}
               />
             ))

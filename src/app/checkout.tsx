@@ -16,7 +16,6 @@ import {
 } from "lucide-react-native";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -25,7 +24,7 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 
-import { Flag } from "@/components/airconnect/ui";
+import { Flag, Toast } from "@/components/airconnect/ui";
 import { getProfileUser } from "@/features/profile/utils";
 import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
@@ -35,6 +34,7 @@ import {
   type PlanDisplayRow,
   toNumber,
 } from "@/lib/planDisplay";
+import { createDemoPurchase } from "@/lib/purchaseQueries";
 
 const paymentMethods = [
   { id: "card", label: "Credit / Debit Card", icon: CreditCard },
@@ -59,7 +59,13 @@ const benefits = [
 
 export default function CheckoutRoute() {
   const { planId } = useLocalSearchParams<{ planId?: string }>();
-  const { user: authUser } = useAuth();
+  const {
+    user: authUser,
+    initializing,
+    signingIn,
+    error: authError,
+    signInWithGoogle,
+  } = useAuth();
   const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(planId));
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -68,6 +74,12 @@ export default function CheckoutRoute() {
   const [appliedPromo, setAppliedPromo] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [purchasePending, setPurchasePending] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchaseNotice, setPurchaseNotice] = useState<{
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
   const profileUser = authUser ? getProfileUser(authUser) : null;
   const profileEmail = authUser?.email ?? "";
 
@@ -109,29 +121,78 @@ export default function CheckoutRoute() {
   const total = Math.max(0, planPrice - discount + taxes);
   const display = plan ? getPlanDisplay(plan) : null;
 
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : "Something went wrong.";
+
   const handleApplyPromo = () => {
     if (promoCode.toUpperCase() === "SUMMER25") {
       setAppliedPromo(true);
+      setPurchaseError(null);
+      setPurchaseNotice({
+        message: "Promo code applied successfully.",
+        variant: "success",
+      });
     } else {
-      Alert.alert("Invalid promo code");
+      setPurchaseError("Invalid promo code.");
+      setPurchaseNotice({ message: "Invalid promo code.", variant: "error" });
     }
   };
 
-  const handleCompletePurchase = () => {
-    if (!plan) return;
+  const handleCompletePurchase = async () => {
+    if (!plan || !authUser || purchasePending) return;
 
     const purchaseFullName = fullName.trim() || profileUser?.name || "";
     const purchaseEmail = email.trim() || profileEmail;
 
     if (!purchaseFullName || !purchaseEmail) {
-      Alert.alert("Please fill in all required fields");
+      setPurchaseError("Please fill in all required fields.");
+      setPurchaseNotice({
+        message: "Please fill in all required fields.",
+        variant: "error",
+      });
       return;
     }
 
-    router.replace({
-      pathname: "/success",
-      params: { planId: plan.id, email: purchaseEmail },
-    });
+    setPurchasePending(true);
+    setPurchaseError(null);
+    setPurchaseNotice(null);
+
+    try {
+      const { data, error } = await createDemoPurchase(authUser.id, plan, {
+        fullName: purchaseFullName,
+        email: purchaseEmail,
+        paymentMethod: selectedPayment,
+        discountAmount: discount,
+        taxAmount: taxes,
+      });
+
+      if (error || !data) {
+        console.error("Purchase creation failed", error);
+        const message = error?.message ?? "Something went wrong.";
+        setPurchaseError(message);
+        setPurchaseNotice({ message, variant: "error" });
+        return;
+      }
+
+      setPurchaseNotice({
+        message: "Purchase created successfully.",
+        variant: "success",
+      });
+
+      setTimeout(() => {
+        router.replace({
+          pathname: "/success",
+          params: { orderId: data.orderId },
+        });
+      }, 450);
+    } catch (error) {
+      console.error("Purchase creation failed", error);
+      const message = getErrorMessage(error);
+      setPurchaseError(message);
+      setPurchaseNotice({ message, variant: "error" });
+    } finally {
+      setPurchasePending(false);
+    }
   };
 
   if (isLoading) {
@@ -139,6 +200,44 @@ export default function CheckoutRoute() {
       <View className="flex-1 items-center justify-center bg-gray-50">
         <ActivityIndicator color="#7B61FF" />
         <Text className="mt-3 text-sm text-gray-600">Loading package...</Text>
+      </View>
+    );
+  }
+
+  if (initializing) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator color="#7B61FF" />
+        <Text className="mt-3 text-sm text-gray-600">Checking sign in...</Text>
+      </View>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50 px-6">
+        <Text className="text-center text-2xl font-semibold text-gray-900">
+          Sign in to continue
+        </Text>
+        <Text className="mt-2 text-center text-sm text-gray-600">
+          Please sign in with Google before buying an eSIM.
+        </Text>
+        {authError ? (
+          <Text className="mt-4 text-center text-sm font-medium text-red-600">
+            {authError}
+          </Text>
+        ) : null}
+        <Pressable
+          disabled={signingIn}
+          onPress={() => void signInWithGoogle()}
+          className={`mt-6 rounded-2xl px-6 py-4 ${
+            signingIn ? "bg-gray-300" : "bg-[#7B61FF]"
+          }`}
+        >
+          <Text className="font-medium text-white">
+            {signingIn ? "Opening Google..." : "Continue with Google"}
+          </Text>
+        </Pressable>
       </View>
     );
   }
@@ -161,6 +260,10 @@ export default function CheckoutRoute() {
 
   return (
     <View className="flex-1 bg-gray-50">
+      <Toast
+        message={purchaseNotice?.message}
+        variant={purchaseNotice?.variant}
+      />
       <View className="bg-white px-6 pt-6">
         <View className="flex-row items-center gap-4">
           <Pressable onPress={() => router.back()} className="rounded-full p-2">
@@ -439,13 +542,21 @@ export default function CheckoutRoute() {
             {formatMoney(total, plan.currency)}
           </Text>
         </View>
+        {purchaseError ? (
+          <Text className="mb-3 text-center text-sm font-medium text-red-600">
+            {purchaseError}
+          </Text>
+        ) : null}
 
         <Pressable
           onPress={handleCompletePurchase}
-          className="w-full rounded-2xl bg-[#7B61FF] px-6 py-4"
+          disabled={purchasePending}
+          className={`w-full rounded-2xl px-6 py-4 ${
+            purchasePending ? "bg-gray-300" : "bg-[#7B61FF]"
+          }`}
         >
           <Text className="text-center font-medium text-white">
-            Complete Purchase
+            {purchasePending ? "Completing..." : "Complete Purchase"}
           </Text>
         </Pressable>
       </View>

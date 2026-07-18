@@ -14,24 +14,95 @@ import { Button, Flag, Row, Screen, Section } from "@/components/airconnect/ui";
 import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
 import { getPlanDisplay, type PlanDisplayRow } from "@/lib/planDisplay";
+import { getOrderWithEsim } from "@/lib/purchaseQueries";
+
+type PersistedOrder = {
+  id: string;
+  traveler_email: string | null;
+  created_at: string;
+  esim_plans?: PlanDisplayRow | PlanDisplayRow[] | null;
+  user_esims?: { id: string; status: string; expires_at: string | null }[] | null;
+};
+
+type PersistedUserEsim = NonNullable<PersistedOrder["user_esims"]>[number];
+
+function firstRow<T>(value: T | T[] | null | undefined) {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 export default function SuccessRoute() {
-  const { planId, email } = useLocalSearchParams<{
+  const { orderId, planId, email } = useLocalSearchParams<{
+    orderId?: string;
     planId?: string;
     email?: string;
   }>();
-  const { user: authUser } = useAuth();
+  const { user: authUser, initializing } = useAuth();
   const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(planId));
+  const [order, setOrder] = useState<PersistedOrder | null>(null);
+  const [userEsim, setUserEsim] = useState<PersistedUserEsim | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(orderId || planId));
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [fallbackPurchaseDate] = useState(() => new Date().toISOString());
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!planId) return;
+    if (orderId && initializing) {
+      return;
+    }
 
-    getPlanDetails(planId)
-      .then(({ data, error }) => {
+    if (!orderId && !planId) {
+      return;
+    }
+
+    if (orderId) {
+      const currentOrderId = orderId;
+
+      async function loadOrder() {
+        try {
+          const { data, error } = await getOrderWithEsim(currentOrderId);
+          if (!isMounted) return;
+
+          const persistedOrder = data as unknown as PersistedOrder | null;
+          const persistedPlan = firstRow(persistedOrder?.esim_plans);
+          const persistedUserEsim = firstRow(persistedOrder?.user_esims);
+
+          if (error || !persistedOrder || !persistedPlan || !persistedUserEsim) {
+            console.error("Success order load failed", error);
+            setLoadError("Unable to load this order.");
+          } else {
+            setOrder(persistedOrder);
+            setUserEsim(persistedUserEsim);
+            setPlan(persistedPlan);
+            setLoadError(null);
+          }
+        } catch (error) {
+          if (isMounted) {
+            console.error("Success order load failed", error);
+            setLoadError("Unable to load this order.");
+          }
+        } finally {
+          if (isMounted) setIsLoading(false);
+        }
+      }
+
+      void loadOrder();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    if (!planId) {
+      return;
+    }
+
+    const legacyPlanId = planId;
+
+    async function loadPlan() {
+      try {
+        const { data, error } = await getPlanDetails(legacyPlanId);
         if (!isMounted) return;
 
         if (error || !data) {
@@ -41,31 +112,32 @@ export default function SuccessRoute() {
           setPlan(data as unknown as PlanDisplayRow);
           setLoadError(null);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (isMounted) {
           console.error("Success plan load failed", error);
           setLoadError("Unable to load this package.");
         }
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) setIsLoading(false);
-      });
+      }
+    }
+
+    void loadPlan();
 
     return () => {
       isMounted = false;
     };
-  }, [planId]);
+  }, [initializing, orderId, planId]);
 
-  const purchaseDate = new Date().toLocaleDateString("en-US", {
+  const purchaseDate = new Date(order?.created_at ?? fallbackPurchaseDate).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
   const display = plan ? getPlanDisplay(plan) : null;
-  const deliveryEmail = email ?? authUser?.email;
+  const deliveryEmail = order?.traveler_email ?? email ?? authUser?.email;
 
-  if (isLoading) {
+  if (initializing || isLoading) {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center">
@@ -76,12 +148,12 @@ export default function SuccessRoute() {
     );
   }
 
-  if (!planId || !plan || loadError) {
+  if ((!orderId && !planId) || !plan || loadError) {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-lg font-bold text-gray-950">
-            {loadError ?? (planId ? "Package unavailable." : "Missing plan.")}
+            {loadError ?? (orderId || planId ? "Package unavailable." : "Missing order.")}
           </Text>
           <Button
             label="Home"
@@ -118,7 +190,7 @@ export default function SuccessRoute() {
                 {display?.data} - {display?.validity} - {display?.network}
               </Text>
               <Text className="mt-3 text-xs text-gray-500">
-                Plan ID: {plan.id}
+                Order ID: {order?.id ?? plan.id}
               </Text>
               <Text className="mt-1 text-xs text-gray-500">
                 Purchase Date: {purchaseDate}
@@ -192,7 +264,10 @@ export default function SuccessRoute() {
           <Button
             label="Install eSIM"
             onPress={() =>
-              router.push({ pathname: "/esim-details", params: { id: plan.id } })
+              router.push({
+                pathname: "/esim-details",
+                params: { id: plan.id, userEsimId: userEsim?.id },
+              })
             }
           />
           <Button
