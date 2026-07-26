@@ -4,6 +4,7 @@ import AnimatedTabBar, {
 import { Tabs } from "expo-router";
 import { Globe, Home as HomeIcon, Smartphone, User } from "lucide-react-native";
 import type { ComponentProps, ComponentType } from "react";
+import { useI18n } from "@/lib/i18n";
 
 type IconComponent = ComponentType<{
   size?: number;
@@ -51,6 +52,8 @@ const CurvedTabBar = AnimatedTabBar as unknown as ComponentType<
 >;
 
 export default function TabsLayout() {
+  const { t } = useI18n();
+
   return (
     <Tabs
       tabBar={(props) => (
@@ -69,10 +72,10 @@ export default function TabsLayout() {
         headerShown: false,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: "Home" }} />
-      <Tabs.Screen name="explore" options={{ title: "Explore" }} />
-      <Tabs.Screen name="my-esims" options={{ title: "My eSIMs" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen name="home" options={{ title: t("tabs.home") }} />
+      <Tabs.Screen name="explore" options={{ title: t("tabs.explore") }} />
+      <Tabs.Screen name="my-esims" options={{ title: t("tabs.myEsims") }} />
+      <Tabs.Screen name="profile" options={{ title: t("tabs.profile") }} />
     </Tabs>
   );
 }

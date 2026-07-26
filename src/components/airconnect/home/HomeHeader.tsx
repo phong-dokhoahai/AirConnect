@@ -1,4 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Bell, Search } from "lucide-react-native";
 import { Pressable, Text, TextInput, View } from "react-native";
 
@@ -15,6 +16,8 @@ export function HomeHeader({
   search: string;
   onSearchChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <View className="bg-white px-6 pt-14 pb-6 rounded-b-[32px]">
       <View className="flex-row items-center justify-between mb-6">
@@ -28,7 +31,7 @@ export function HomeHeader({
           </Text>
 
           <Text className="text-sm text-[#6B7280] mt-1">
-            Ready for your next trip?
+            {t("home.readyForTrip")}
           </Text>
         </View>
 
@@ -81,7 +84,7 @@ export function HomeHeader({
         <TextInput
           value={search}
           onChangeText={onSearchChange}
-          placeholder="Search destination, region, or eSIM"
+          placeholder={t("home.searchPlaceholder")}
           className="bg-[#F3F4F6] rounded-2xl pl-12 pr-4 py-4 text-[#111827]"
         />
       </View>

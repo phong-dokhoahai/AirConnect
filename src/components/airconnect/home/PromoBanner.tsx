@@ -1,8 +1,11 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Globe } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
 export function PromoBanner() {
+  const { t } = useI18n();
+
   return (
     <View className="px-6 mt-6">
       <CustomLinearGradient
@@ -15,20 +18,20 @@ export function PromoBanner() {
         <View className="flex-row justify-between">
           <View className="flex-1 pr-4">
             <Text className="text-2xl font-semibold text-white">
-              Travel Smarter
+              {t("home.travelSmarter")}
             </Text>
 
             <Text className="text-2xl font-semibold text-white">
-              with eSIM
+              {t("home.withEsim")}
             </Text>
 
             <Text className="text-white mt-2 mb-4">
-              Instant activation in over 200 countries.
+              {t("home.instantCountries")}
             </Text>
 
             <Pressable className="bg-white self-start px-5 py-3 rounded-xl">
               <Text className="font-medium text-[#7B61FF]">
-                Explore Plans
+                {t("common.browsePlans")}
               </Text>
             </Pressable>
           </View>

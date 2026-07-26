@@ -1,10 +1,10 @@
 import {
   Bell,
   BookOpen,
+  Check,
   CreditCard,
   FileText,
   Globe,
-  HelpCircle,
   Languages,
   Lock,
   LogOut,
@@ -14,11 +14,14 @@ import {
   Shield,
   Star,
   Sun,
-  User
+  User,
+  X,
 } from "lucide-react-native";
 import type { Dispatch, SetStateAction } from "react";
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Modal, Pressable, Text, View } from "react-native";
 
+import { languageOptions, useI18n, type LanguageCode } from "@/lib/i18n";
 import { AuthMessage } from "./AuthMessage";
 import { SectionCard, SectionTitle } from "./Section";
 import { SettingItem } from "./SettingItem";
@@ -38,14 +41,36 @@ type SettingsSectionsProps = {
   signOut: () => void;
 };
 
+type SettingsDetailId =
+  | "personalInformation"
+  | "paymentMethods"
+  | "changePassword"
+  | "manageDevices"
+  | "privacySettings"
+  | "helpCenter"
+  | "contactSupport"
+  | "faq"
+  | "termsPrivacy";
+
+type SettingsDetail = {
+  title: string;
+  body: string;
+  rows: string[];
+};
+
 export function SettingsSections(props: SettingsSectionsProps) {
+  const { t } = useI18n();
+  const [detailId, setDetailId] = useState<SettingsDetailId | null>(null);
+  const detail = detailId ? getSettingsDetail(detailId, t) : null;
+
   return (
     <>
-      <AccountSettings {...props} />
+      <AccountSettings {...props} openDetail={setDetailId} />
       <PreferenceSettings {...props} />
-      <SecuritySettings {...props} />
-      <SupportSettings />
+      <SecuritySettings {...props} openDetail={setDetailId} />
+      <SupportSettings openDetail={setDetailId} />
       <AccountActions error={props.error} signOut={props.signOut} />
+      <SettingsDetailModal detail={detail} onClose={() => setDetailId(null)} />
     </>
   );
 }
@@ -57,29 +82,36 @@ function AccountSettings({
   setPromoEnabled,
   travelAlertsEnabled,
   setTravelAlertsEnabled,
-}: SettingsSectionsProps) {
+  openDetail,
+}: SettingsSectionsProps & {
+  openDetail: (id: SettingsDetailId) => void;
+}) {
+  const { t } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionCard title="Account">
+      <SectionCard title={t("profile.account")}>
         <SettingItem
           item={{
             icon: User,
-            label: "Personal Information",
-            sub: "Name, email, phone",
+            label: t("profile.personalInformation"),
+            sub: t("profile.personalInformationSub"),
           }}
+          onPress={() => openDetail("personalInformation")}
         />
         <SettingItem
           item={{
             icon: CreditCard,
-            label: "Payment Methods",
-            sub: "2 cards saved",
+            label: t("profile.paymentMethods"),
+            sub: t("profile.paymentMethodsSub"),
           }}
+          onPress={() => openDetail("paymentMethods")}
         />
         <SettingItem
           item={{
             icon: Bell,
-            label: "Push Notifications",
-            sub: "Instant alerts",
+            label: t("profile.pushNotifications"),
+            sub: t("profile.pushNotificationsSub"),
             toggle: true,
             toggled: pushEnabled,
           }}
@@ -88,8 +120,8 @@ function AccountSettings({
         <SettingItem
           item={{
             icon: Star,
-            label: "Promotions",
-            sub: "Deals & offers",
+            label: t("profile.promotions"),
+            sub: t("profile.promotionsSub"),
             toggle: true,
             toggled: promoEnabled,
           }}
@@ -98,8 +130,8 @@ function AccountSettings({
         <SettingItem
           item={{
             icon: Globe,
-            label: "Travel Alerts",
-            sub: "Coverage updates",
+            label: t("profile.travelAlerts"),
+            sub: t("profile.travelAlertsSub"),
             toggle: true,
             toggled: travelAlertsEnabled,
           }}
@@ -110,15 +142,27 @@ function AccountSettings({
   );
 }
 
+function getOptionLabel(code: LanguageCode, currentLanguage: LanguageCode) {
+  if (currentLanguage === "vi") {
+    return code === "en" ? "Tiếng Anh" : "Tiếng Việt";
+  }
+
+  return code === "en" ? "English" : "Vietnamese";
+}
+
 function PreferenceSettings({ darkMode, setDarkMode }: SettingsSectionsProps) {
+  const { language, setLanguage, t } = useI18n();
+  const [modalVisible, setModalVisible] = useState(false);
+  const languageLabel = getOptionLabel(language, language);
+
   return (
     <View className="mt-5">
-      <SectionCard title="Preferences">
+      <SectionCard title={t("profile.preferences")}>
         <SettingItem
           item={{
             icon: darkMode ? Moon : Sun,
-            label: "Appearance",
-            sub: darkMode ? "Dark mode" : "Light mode",
+            label: t("profile.appearance"),
+            sub: darkMode ? t("profile.darkMode") : t("profile.lightMode"),
             toggle: true,
             toggled: darkMode,
           }}
@@ -128,11 +172,70 @@ function PreferenceSettings({ darkMode, setDarkMode }: SettingsSectionsProps) {
         <SettingItem
           item={{
             icon: Languages,
-            label: "Language & Region",
-            sub: "English • USD • US",
+            label: t("profile.languageRegion"),
+            sub: languageLabel,
+            accessibilityLabel: t("profile.languageRegionA11y"),
           }}
+          onPress={() => setModalVisible(true)}
         />
       </SectionCard>
+
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/40"
+          onPress={() => setModalVisible(false)}
+        >
+          <Pressable className="rounded-t-3xl bg-white p-5" onPress={() => {}}>
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-gray-950">
+                {t("profile.languageRegion")}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("common.back")}
+                onPress={() => setModalVisible(false)}
+                className="rounded-full bg-gray-100 p-2"
+              >
+                <X size={18} color="#4B5563" />
+              </Pressable>
+            </View>
+
+            {languageOptions.map((option) => {
+              const selected = option.code === language;
+
+              return (
+                <Pressable
+                  key={option.code}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setLanguage(option.code);
+                    setModalVisible(false);
+                  }}
+                  className={`mb-3 flex-row items-center justify-between rounded-2xl border px-4 py-4 ${
+                    selected
+                      ? "border-[#6915E0] bg-[#F5F0FF]"
+                      : "border-gray-100 bg-white"
+                  }`}
+                >
+                  <Text
+                    className={`font-semibold ${
+                      selected ? "text-[#6915E0]" : "text-gray-950"
+                    }`}
+                  >
+                    {getOptionLabel(option.code, language)}
+                  </Text>
+                  {selected ? <Check size={20} color="#6915E0" /> : null}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -140,23 +243,29 @@ function PreferenceSettings({ darkMode, setDarkMode }: SettingsSectionsProps) {
 function SecuritySettings({
   twoFAEnabled,
   setTwoFAEnabled,
-}: SettingsSectionsProps) {
+  openDetail,
+}: SettingsSectionsProps & {
+  openDetail: (id: SettingsDetailId) => void;
+}) {
+  const { t } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionCard title="Security">
+      <SectionCard title={t("profile.security")}>
         <SettingItem
           item={{
             icon: Lock,
-            label: "Change Password",
-            sub: "Last changed 30 days ago",
+            label: t("profile.changePassword"),
+            sub: t("profile.changePasswordSub"),
           }}
+          onPress={() => openDetail("changePassword")}
         />
 
         <SettingItem
           item={{
             icon: Shield,
-            label: "Two-Factor Authentication",
-            sub: "Authenticator app",
+            label: t("profile.twoFactor"),
+            sub: t("profile.twoFactorSub"),
             toggle: true,
             toggled: twoFAEnabled,
           }}
@@ -166,60 +275,136 @@ function SecuritySettings({
         <SettingItem
           item={{
             icon: Monitor,
-            label: "Manage Devices",
-            sub: "2 active sessions",
+            label: t("profile.manageDevices"),
+            sub: t("profile.manageDevicesSub"),
           }}
+          onPress={() => openDetail("manageDevices")}
         />
 
         <SettingItem
           item={{
             icon: FileText,
-            label: "Privacy Settings",
-            sub: "Data & permissions",
+            label: t("profile.privacySettings"),
+            sub: t("profile.privacySettingsSub"),
           }}
+          onPress={() => openDetail("privacySettings")}
         />
       </SectionCard>
     </View>
   );
 }
 
-function SupportSettings() {
+function SupportSettings({
+  openDetail,
+}: {
+  openDetail: (id: SettingsDetailId) => void;
+}) {
+  const { t } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionCard title="Support">
-        <SettingItem
+      <SectionCard title={t("profile.support")}>
+        {/* <SettingItem
           item={{
             icon: HelpCircle,
-            label: "Help Center",
-            sub: "Browse articles",
+            label: t("profile.helpCenter"),
+            sub: t("profile.helpCenterSub"),
           }}
-        />
+          onPress={() => openDetail("helpCenter")}
+        /> */}
 
         <SettingItem
           item={{
             icon: MessageCircle,
-            label: "Contact Support",
-            sub: "Chat or email",
+            label: t("profile.contactSupport"),
+            sub: t("profile.contactSupportSub"),
           }}
+          onPress={() => openDetail("contactSupport")}
         />
 
         <SettingItem
           item={{
             icon: BookOpen,
-            label: "FAQ",
-            sub: "Common questions",
+            label: t("profile.faq"),
+            sub: t("profile.faqSub"),
           }}
+          onPress={() => openDetail("faq")}
         />
 
         <SettingItem
           item={{
             icon: FileText,
-            label: "Terms & Privacy Policy",
-            sub: "Legal information",
+            label: t("profile.termsPrivacy"),
+            sub: t("profile.termsPrivacySub"),
           }}
+          onPress={() => openDetail("termsPrivacy")}
         />
       </SectionCard>
     </View>
+  );
+}
+
+function getSettingsDetail(
+  id: SettingsDetailId,
+  t: (key: string) => string,
+): SettingsDetail {
+  return {
+    title: t(`profile.detail.${id}.title`),
+    body: t(`profile.detail.${id}.body`),
+    rows: [1, 2, 3].map((index) => t(`profile.detail.${id}.row${index}`)),
+  };
+}
+
+function SettingsDetailModal({
+  detail,
+  onClose,
+}: {
+  detail: SettingsDetail | null;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Modal
+      visible={!!detail}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
+        <Pressable className="rounded-t-3xl bg-white p-5" onPress={() => {}}>
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-gray-950">
+              {detail?.title}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("common.back")}
+              onPress={onClose}
+              className="rounded-full bg-gray-100 p-2"
+            >
+              <X size={18} color="#4B5563" />
+            </Pressable>
+          </View>
+
+          <Text className="mb-4 text-sm leading-6 text-gray-600">
+            {detail?.body}
+          </Text>
+
+          {detail?.rows.map((row) => (
+            <View
+              key={row}
+              className="mb-3 flex-row rounded-2xl bg-gray-50 px-4 py-3"
+            >
+              <Check size={16} color="#6915E0" />
+              <Text className="ml-3 flex-1 text-sm leading-5 text-gray-700">
+                {row}
+              </Text>
+            </View>
+          ))}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -230,16 +415,18 @@ function AccountActions({
   error: string | null;
   signOut: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionTitle title="Account Actions" />
+      <SectionTitle title={t("profile.accountActions")} />
 
       <View className="bg-white rounded-[24px] border border-gray-100 overflow-hidden">
         <SettingItem
           item={{
             icon: LogOut,
-            label: "Sign Out",
-            sub: "See you next time!",
+            label: t("profile.signOut"),
+            sub: t("profile.signOutSub"),
           }}
           onPress={signOut}
         />
@@ -248,7 +435,7 @@ function AccountActions({
       {!!error && <AuthMessage message={error} />}
 
       <Text className="text-center text-xs text-gray-400 mt-4 mb-6">
-        SimRoam v2.4.1 · Made with ❤️ for travelers
+        {t("profile.footer")}
       </Text>
     </View>
   );

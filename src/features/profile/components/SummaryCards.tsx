@@ -1,4 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Pressable, Text, View } from "react-native";
 
 import type { QuickAction, StatItem } from "../types";
@@ -6,6 +7,7 @@ import { SectionTitle } from "./Section";
 
 export function StatCard({ stat }: { stat: StatItem }) {
   const Icon = stat.icon;
+  const { t } = useI18n();
 
   return (
     <View className="flex-1 bg-white rounded-3xl p-4 border border-gray-100 items-center">
@@ -22,7 +24,9 @@ export function StatCard({ stat }: { stat: StatItem }) {
         {stat.value}
       </Text>
 
-      <Text className="text-xs text-center text-gray-500">{stat.label}</Text>
+      <Text className="text-xs text-center text-gray-500">
+        {t(stat.labelKey)}
+      </Text>
     </View>
   );
 }
@@ -31,7 +35,7 @@ export function StatsRow({ stats }: { stats: StatItem[] }) {
   return (
     <View className="flex-row mt-5">
       {stats.map((item) => (
-        <View key={item.label} className="flex-1 mx-1">
+        <View key={item.labelKey} className="flex-1 mx-1">
           <StatCard stat={item} />
         </View>
       ))}
@@ -46,14 +50,16 @@ export function QuickActionsGrid({
   actions: QuickAction[];
   onActionPress: (screen: string) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionTitle title="Quick Actions" />
+      <SectionTitle title={t("profile.quickActions")} />
 
       <View className="flex-row flex-wrap justify-between gap-y-3">
         {actions.map((item) => (
           <QuickActionCard
-            key={item.label}
+            key={item.labelKey}
             item={item}
             onActionPress={onActionPress}
           />
@@ -71,6 +77,7 @@ function QuickActionCard({
   onActionPress: (screen: string) => void;
 }) {
   const Icon = item.icon;
+  const { t } = useI18n();
 
   return (
     <Pressable
@@ -86,9 +93,11 @@ function QuickActionCard({
         <Icon size={20} color="#FFFFFF" />
       </CustomLinearGradient>
 
-      <Text className="text-sm font-semibold text-gray-900">{item.label}</Text>
+      <Text className="text-sm font-semibold text-gray-900">
+        {t(item.labelKey)}
+      </Text>
 
-      <Text className="text-xs text-gray-500 mt-1">{item.sub}</Text>
+      <Text className="text-xs text-gray-500 mt-1">{t(item.subKey)}</Text>
     </Pressable>
   );
 }

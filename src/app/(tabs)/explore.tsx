@@ -16,6 +16,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -25,6 +26,7 @@ import type {
   RegionalPlan,
 } from "@/components/airconnect/home/types";
 import { getCatalogData } from "@/lib/catalogApi";
+import { useI18n } from "@/lib/i18n";
 
 const recentSearches = ["Japan", "Thailand", "Europe", "South Korea"];
 
@@ -42,6 +44,7 @@ const emptyCatalog: CatalogState = {
 
 export default function ExploreRoute() {
   const router = useRouter();
+  const { t, translateName } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearchesList, setRecentSearchesList] = useState(recentSearches);
@@ -125,7 +128,7 @@ export default function ExploreRoute() {
             </Pressable>
 
             <Text className="text-2xl font-semibold text-[#111827]">
-              Explore eSIMs
+              {t("explore.title")}
             </Text>
           </View>
 
@@ -135,7 +138,7 @@ export default function ExploreRoute() {
             </View>
 
             <TextInput
-              placeholder="Search country, region, or destination"
+              placeholder={t("explore.searchPlaceholder")}
               value={searchQuery}
               onChangeText={setSearchQuery}
               className="bg-[#F3F4F6] rounded-2xl pl-12 pr-12 py-4 text-[#111827]"
@@ -150,7 +153,7 @@ export default function ExploreRoute() {
         {recentSearchesList.length > 0 && (
           <View className="px-6 mt-6">
             <Text className="text-sm font-medium text-[#6B7280] mb-3">
-              Recent Searches
+              {t("explore.recentSearches")}
             </Text>
 
             <View className="flex-row flex-wrap">
@@ -159,7 +162,9 @@ export default function ExploreRoute() {
                   key={search}
                   className="flex-row items-center bg-white border border-[#E5E7EB] rounded-full px-4 py-2 mr-2 mb-2"
                 >
-                  <Text className="text-sm text-[#374151] mr-2">{search}</Text>
+                  <Text className="text-sm text-[#374151] mr-2">
+                    {translateName(search)}
+                  </Text>
 
                   <Pressable onPress={() => removeRecentSearch(search)}>
                     <X size={14} color="#9CA3AF" />
@@ -173,7 +178,7 @@ export default function ExploreRoute() {
         {isCatalogLoading ? (
           <View className="mx-6 mt-6 rounded-2xl border border-[#F3F4F6] bg-white p-4">
             <Text className="text-sm font-medium text-[#4B5563]">
-              Loading catalog...
+              {t("common.loadingCatalog")}
             </Text>
           </View>
         ) : null}
@@ -186,7 +191,7 @@ export default function ExploreRoute() {
 
             <Pressable className="mt-3 self-start" onPress={loadCatalog}>
               <Text className="text-sm font-semibold text-[#7B61FF]">
-                Retry
+                {t("common.retry")}
               </Text>
             </Pressable>
           </View>
@@ -195,12 +200,12 @@ export default function ExploreRoute() {
         <View className="px-6 mt-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-semibold text-[#111827]">
-              Popular Destinations
+              {t("home.popularDestinations")}
             </Text>
 
             <Pressable className="flex-row items-center">
               <Text className="text-sm font-medium text-[#7B61FF] mr-1">
-                See All
+                {t("common.seeAll")}
               </Text>
               <ChevronRight size={16} color="#7B61FF" />
             </Pressable>
@@ -216,11 +221,11 @@ export default function ExploreRoute() {
                 <Text style={{ fontSize: 32 }}>{destination.flag}</Text>
 
                 <Text className="font-semibold text-[#111827] mt-3 mb-1">
-                  {destination.name}
+                  {translateName(destination.name)}
                 </Text>
 
                 <Text className="text-sm font-medium text-[#7B61FF]">
-                  From {destination.price}
+                  {t("common.from", { value: destination.price })}
                 </Text>
               </Pressable>
             ))}
@@ -230,12 +235,12 @@ export default function ExploreRoute() {
         <View className="mt-6">
           <View className="px-6 mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-semibold text-[#111827]">
-              Regional Plans
+              {t("home.regionalPlans")}
             </Text>
 
             <Pressable className="flex-row items-center">
               <Text className="text-sm font-medium text-[#7B61FF] mr-1">
-                See All
+                {t("common.seeAll")}
               </Text>
               <ChevronRight size={16} color="#7B61FF" />
             </Pressable>
@@ -267,15 +272,15 @@ export default function ExploreRoute() {
                 </CustomLinearGradient>
 
                 <Text className="font-semibold text-[#111827] mb-1">
-                  {region.name}
+                  {translateName(region.name)}
                 </Text>
 
                 <Text className="text-xs text-[#6B7280] mb-2">
-                  {region.countries} countries
+                  {t("home.countriesCount", { count: region.countries })}
                 </Text>
 
                 <Text className="text-sm font-medium text-[#7B61FF]">
-                  From {region.price}
+                  {t("common.from", { value: region.price })}
                 </Text>
               </Pressable>
             ))}
@@ -284,7 +289,7 @@ export default function ExploreRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-lg font-semibold text-[#111827] mb-3">
-            Featured Plans
+            {t("explore.featuredPlans")}
           </Text>
 
           {catalog.featuredPlans.map((plan) => (
@@ -295,11 +300,19 @@ export default function ExploreRoute() {
               <View className="flex-row">
                 <Text style={{ fontSize: 28 }}>{plan.flag}</Text>
 
-                <View className="flex-1 ml-3">
+                <TouchableOpacity
+                  className="flex-1 ml-3"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/plan/[id]",
+                      params: { id: plan.id },
+                    })
+                  }
+                >
                   <View className="flex-row justify-between">
                     <View className="flex-1">
                       <Text className="font-semibold text-[#111827]">
-                        {plan.country}
+                        {translateName(plan.country)}
                       </Text>
 
                       <Text className="text-xs text-[#6B7280] mt-1">
@@ -334,26 +347,12 @@ export default function ExploreRoute() {
 
                       <View className="bg-[#ECFDF5] px-2 py-1 rounded-full">
                         <Text className="text-xs font-medium text-[#15803D]">
-                          Save {plan.savings}
+                          {t("common.save", { value: plan.savings })}
                         </Text>
                       </View>
                     </View>
-
-                    <Pressable
-                      className="px-4 py-2 rounded-xl border-2 border-[#7B61FF]"
-                      onPress={() =>
-                        router.push({
-                          pathname: "/plan/[id]",
-                          params: { id: plan.id },
-                        })
-                      }
-                    >
-                      <Text className="text-sm font-medium text-[#7B61FF]">
-                        View Details
-                      </Text>
-                    </Pressable>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -365,7 +364,7 @@ export default function ExploreRoute() {
         style={{
           position: "absolute",
           right: 24,
-          bottom: 32,
+          bottom: 80,
         }}
       >
         <CustomLinearGradient
@@ -395,7 +394,7 @@ export default function ExploreRoute() {
           <Pressable className="bg-white rounded-t-3xl p-6" onPress={() => {}}>
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-semibold text-[#111827]">
-                Filter Plans
+                {t("explore.filterPlans")}
               </Text>
 
               <Pressable onPress={() => setShowFilterModal(false)}>
@@ -404,12 +403,12 @@ export default function ExploreRoute() {
             </View>
 
             <Text className="text-sm font-medium text-[#374151] mb-2">
-              Price Range
+              {t("explore.priceRange")}
             </Text>
 
             <View className="flex-row mb-4">
               <TextInput
-                placeholder="Min"
+                placeholder={t("explore.min")}
                 keyboardType="numeric"
                 value={minPrice}
                 onChangeText={setMinPrice}
@@ -417,7 +416,7 @@ export default function ExploreRoute() {
               />
 
               <TextInput
-                placeholder="Max"
+                placeholder={t("explore.max")}
                 keyboardType="numeric"
                 value={maxPrice}
                 onChangeText={setMaxPrice}
@@ -426,7 +425,7 @@ export default function ExploreRoute() {
             </View>
 
             <Text className="text-sm font-medium text-[#374151] mb-2">
-              Data Amount
+              {t("explore.dataAmount")}
             </Text>
 
             <View className="flex-row justify-between mb-4">
@@ -442,7 +441,7 @@ export default function ExploreRoute() {
             </View>
 
             <Text className="text-sm font-medium text-[#374151] mb-2">
-              Network Type
+              {t("explore.networkType")}
             </Text>
 
             <View className="flex-row justify-between mb-6">
@@ -459,14 +458,18 @@ export default function ExploreRoute() {
 
             <View className="flex-row">
               <Pressable className="flex-1 bg-[#F3F4F6] rounded-2xl py-4 mr-2 items-center">
-                <Text className="font-medium text-[#374151]">Reset</Text>
+                <Text className="font-medium text-[#374151]">
+                  {t("common.reset")}
+                </Text>
               </Pressable>
 
               <Pressable
                 className="flex-1 bg-[#7B61FF] rounded-2xl py-4 items-center"
                 onPress={() => setShowFilterModal(false)}
               >
-                <Text className="font-medium text-white">Apply Filters</Text>
+                <Text className="font-medium text-white">
+                  {t("common.applyFilters")}
+                </Text>
               </Pressable>
             </View>
           </Pressable>

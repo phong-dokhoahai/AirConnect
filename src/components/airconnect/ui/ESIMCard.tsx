@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
 import type { ESIM } from "@/constants/airconnect";
+import { useI18n } from "@/lib/i18n";
 import { Flag } from "./Flag";
 import { ProgressBar } from "./ProgressBar";
 import { Row } from "./Row";
@@ -13,9 +14,19 @@ export function ESIMCard({
   esim: ESIM;
   onViewDetails: (id: string) => void;
 }) {
+  const { language, t, translateName } = useI18n();
   const dataPercent = esim.dataTotal
     ? Math.min((esim.dataUsed / esim.dataTotal) * 100, 100)
     : 0;
+  const expiresAt = new Date(esim.expiryDate);
+  const expiryDate = Number.isNaN(expiresAt.getTime())
+    ? esim.expiryDate
+    : expiresAt.toLocaleDateString(language === "vi" ? "vi" : "en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
   return (
     <Pressable
       onPress={() => onViewDetails(esim.id)}
@@ -26,10 +37,12 @@ export function ESIMCard({
           <Flag value={esim.flag} />
           <View className="flex-1">
             <Text className="text-lg font-bold text-gray-950">
-              {esim.country}
+              {translateName(esim.country)}
             </Text>
             <Text className="mt-1 text-sm text-gray-500">
-              {esim.planName} - {esim.data} - {esim.network}
+              {translateName(esim.planName)} -{" "}
+              {esim.data === "Unlimited" ? t("common.unlimited") : esim.data} -{" "}
+              {esim.network}
             </Text>
           </View>
         </Row>
@@ -37,10 +50,12 @@ export function ESIMCard({
       </Row>
       <View className="mt-5">
         <Row className="mb-2 justify-between">
-          <Text className="text-sm text-gray-500">Data Remaining</Text>
+          <Text className="text-sm text-gray-500">
+            {t("myEsims.dataRemaining")}
+          </Text>
           <Text className="text-sm font-bold text-gray-900">
             {esim.data === "Unlimited"
-              ? "Unlimited"
+              ? t("common.unlimited")
               : `${(esim.dataTotal - esim.dataUsed).toFixed(1)}GB`}
           </Text>
         </Row>
@@ -50,8 +65,12 @@ export function ESIMCard({
         />
       </View>
       <Row className="mt-4 justify-between">
-        <Text className="text-sm text-gray-500">Expires {esim.expiryDate}</Text>
-        <Text className="font-semibold text-[#6915E0]">Details</Text>
+        <Text className="text-sm text-gray-500">
+          {t("common.expires")} {expiryDate}
+        </Text>
+        <Text className="font-semibold text-[#6915E0]">
+          {t("common.viewDetails")}
+        </Text>
       </Row>
     </Pressable>
   );

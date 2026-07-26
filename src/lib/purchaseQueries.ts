@@ -139,3 +139,32 @@ export function getOrderWithEsim(orderId: string) {
     .eq("id", orderId)
     .single();
 }
+
+export function getUserOrders(userId: string) {
+  return supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      status,
+      traveler_email,
+      payment_method,
+      subtotal_amount,
+      discount_amount,
+      tax_amount,
+      total_amount,
+      currency,
+      created_at,
+      esim_plans (
+        ${planSelect}
+      ),
+      user_esims (
+        id,
+        status,
+        expires_at
+      )
+    `,
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+}

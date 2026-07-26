@@ -1,15 +1,15 @@
 import { router, useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import {
   ArrowLeft,
   Check,
   Clock,
   CreditCard,
-  DollarSign,
   Headphones,
   Phone,
   QrCode,
   Shield,
-  Smartphone,
   Tag,
   Users,
   Zap,
@@ -28,36 +28,39 @@ import { Flag, Toast } from "@/components/airconnect/ui";
 import { getProfileUser } from "@/features/profile/utils";
 import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
+import { useI18n } from "@/lib/i18n";
 import {
   formatMoney,
   getPlanDisplay,
   type PlanDisplayRow,
   toNumber,
 } from "@/lib/planDisplay";
-import { createDemoPurchase } from "@/lib/purchaseQueries";
+import {
+  createSepayPendingPayment,
+  createStripeCheckoutPayment,
+} from "@/lib/payments";
 
 const paymentMethods = [
-  { id: "card", label: "Credit / Debit Card", icon: CreditCard },
-  { id: "apple-pay", label: "Apple Pay", icon: Smartphone },
-  { id: "google-pay", label: "Google Pay", icon: Smartphone },
-  { id: "paypal", label: "PayPal", icon: DollarSign },
+  { id: "sepay", labelKey: "payment.sepay", icon: QrCode },
+  { id: "stripe", labelKey: "payment.stripe", icon: CreditCard },
 ];
 
 const trustBadges = [
-  { icon: Shield, label: "Secure Payment" },
-  { icon: Zap, label: "Instant Delivery" },
-  { icon: Headphones, label: "24/7 Support" },
-  { icon: Users, label: "1M+ Travelers" },
+  { icon: Shield, labelKey: "checkout.securePayment" },
+  { icon: Zap, labelKey: "checkout.instantDelivery" },
+  { icon: Headphones, labelKey: "checkout.support247" },
+  { icon: Users, labelKey: "checkout.travelers1m" },
 ];
 
 const benefits = [
-  { icon: QrCode, label: "QR Code Delivered Instantly" },
-  { icon: Clock, label: "Activation in Under 2 Minutes" },
-  { icon: CreditCard, label: "No Physical SIM Required" },
-  { icon: Phone, label: "Keep Your Existing Number" },
+  { icon: QrCode, labelKey: "checkout.qrDelivered" },
+  { icon: Clock, labelKey: "checkout.activationUnderTwo" },
+  { icon: CreditCard, labelKey: "checkout.noPhysicalSim" },
+  { icon: Phone, labelKey: "checkout.keepNumber" },
 ];
 
 export default function CheckoutRoute() {
+  const { t, translateName } = useI18n();
   const { planId } = useLocalSearchParams<{ planId?: string }>();
   const {
     user: authUser,
@@ -69,7 +72,7 @@ export default function CheckoutRoute() {
   const [plan, setPlan] = useState<PlanDisplayRow | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(planId));
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedPayment, setSelectedPayment] = useState("card");
+  const [selectedPayment, setSelectedPayment] = useState("sepay");
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(false);
   const [purchasePending, setPurchasePending] = useState(false);
@@ -92,7 +95,7 @@ export default function CheckoutRoute() {
 
         if (error || !data) {
           console.error("Checkout plan load failed", error);
-          setLoadError("Unable to load this package.");
+          setLoadError(t("checkout.unableLoadPackage"));
         } else {
           setPlan(data as unknown as PlanDisplayRow);
           setLoadError(null);
@@ -101,7 +104,7 @@ export default function CheckoutRoute() {
       .catch((error) => {
         if (isMounted) {
           console.error("Checkout plan load failed", error);
-          setLoadError("Unable to load this package.");
+          setLoadError(t("checkout.unableLoadPackage"));
         }
       })
       .finally(() => {
@@ -111,7 +114,7 @@ export default function CheckoutRoute() {
     return () => {
       isMounted = false;
     };
-  }, [planId]);
+  }, [planId, t]);
 
   const planPrice = toNumber(plan?.price);
   const discount = appliedPromo ? 2.0 : 0;
@@ -122,19 +125,19 @@ export default function CheckoutRoute() {
     profileUser?.name || profileEmail.split("@")[0] || "AirConnect Traveler";
 
   const getErrorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : "Something went wrong.";
+    error instanceof Error ? error.message : t("common.somethingWrong");
 
   const handleApplyPromo = () => {
     if (promoCode.toUpperCase() === "SUMMER25") {
       setAppliedPromo(true);
       setPurchaseError(null);
       setPurchaseNotice({
-        message: "Promo code applied successfully.",
+        message: t("checkout.promoApplied"),
         variant: "success",
       });
     } else {
-      setPurchaseError("Invalid promo code.");
-      setPurchaseNotice({ message: "Invalid promo code.", variant: "error" });
+      setPurchaseError(t("checkout.invalidPromo"));
+      setPurchaseNotice({ message: t("checkout.invalidPromo"), variant: "error" });
     }
   };
 
@@ -142,9 +145,9 @@ export default function CheckoutRoute() {
     if (!plan || !authUser || purchasePending) return;
 
     if (!profileEmail) {
-      setPurchaseError("Your account email is required to complete purchase.");
+      setPurchaseError(t("checkout.emailRequired"));
       setPurchaseNotice({
-        message: "Your account email is required to complete purchase.",
+        message: t("checkout.emailRequired"),
         variant: "error",
       });
       return;
@@ -155,33 +158,58 @@ export default function CheckoutRoute() {
     setPurchaseNotice(null);
 
     try {
-      const { data, error } = await createDemoPurchase(authUser.id, plan, {
-        fullName: travelerName,
-        email: profileEmail,
-        paymentMethod: selectedPayment,
+      const paymentInput = {
+        planId: plan.id,
+        travelerFullName: travelerName,
+        travelerEmail: profileEmail,
         discountAmount: discount,
         taxAmount: taxes,
-      });
+        metadata: {
+          productType: "esim" as const,
+          esimId: plan.id,
+          planId: plan.id,
+          country: translateName(display?.name) ?? "",
+          days: Number(plan.validity_days ?? 0),
+          gb: Number(plan.data_amount_gb ?? 0),
+        },
+      };
+
+      if (selectedPayment === "stripe") {
+        const payment = await createStripeCheckoutPayment({
+          ...paymentInput,
+          successUrl: Linking.createURL("success"),
+          cancelUrl: Linking.createURL("checkout"),
+        });
+
+        if (payment.error || !payment.data?.checkoutUrl) {
+          const message = payment.error?.message ?? t("checkout.unableStartStripe");
+          setPurchaseError(message);
+          setPurchaseNotice({ message, variant: "error" });
+          return;
+        }
+
+        await WebBrowser.openBrowserAsync(payment.data.checkoutUrl);
+        setPurchaseNotice({
+          message: t("checkout.paymentPending"),
+          variant: "success",
+        });
+        return;
+      }
+
+      const { data, error } = await createSepayPendingPayment(paymentInput);
 
       if (error || !data) {
         console.error("Purchase creation failed", error);
-        const message = error?.message ?? "Something went wrong.";
+        const message = error?.message ?? t("common.somethingWrong");
         setPurchaseError(message);
         setPurchaseNotice({ message, variant: "error" });
         return;
       }
 
       setPurchaseNotice({
-        message: "Purchase created successfully.",
+        message: t("checkout.sepayPending", { code: data.paymentCode }),
         variant: "success",
       });
-
-      setTimeout(() => {
-        router.replace({
-          pathname: "/success",
-          params: { orderId: data.orderId },
-        });
-      }, 450);
     } catch (error) {
       console.error("Purchase creation failed", error);
       const message = getErrorMessage(error);
@@ -196,7 +224,9 @@ export default function CheckoutRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
         <ActivityIndicator color="#7B61FF" />
-        <Text className="mt-3 text-sm text-gray-600">Loading package...</Text>
+        <Text className="mt-3 text-sm text-gray-600">
+          {t("common.loadingPackage")}
+        </Text>
       </View>
     );
   }
@@ -205,7 +235,9 @@ export default function CheckoutRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
         <ActivityIndicator color="#7B61FF" />
-        <Text className="mt-3 text-sm text-gray-600">Checking sign in...</Text>
+        <Text className="mt-3 text-sm text-gray-600">
+          {t("common.checkingSignIn")}
+        </Text>
       </View>
     );
   }
@@ -214,10 +246,10 @@ export default function CheckoutRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50 px-6">
         <Text className="text-center text-2xl font-semibold text-gray-900">
-          Sign in to continue
+          {t("common.signInRequired")}
         </Text>
         <Text className="mt-2 text-center text-sm text-gray-600">
-          Please sign in with Google before buying an eSIM.
+          {t("checkout.signInBody")}
         </Text>
         {authError ? (
           <Text className="mt-4 text-center text-sm font-medium text-red-600">
@@ -232,7 +264,7 @@ export default function CheckoutRoute() {
           }`}
         >
           <Text className="font-medium text-white">
-            {signingIn ? "Opening Google..." : "Continue with Google"}
+            {signingIn ? t("common.openingGoogle") : t("common.continueWithGoogle")}
           </Text>
         </Pressable>
       </View>
@@ -243,13 +275,13 @@ export default function CheckoutRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50 px-6">
         <Text className="text-center text-lg font-semibold text-gray-900">
-          {loadError ?? (planId ? "Package unavailable." : "Missing plan.")}
+          {loadError ?? (planId ? t("common.packageUnavailable") : t("common.missingPlan"))}
         </Text>
         <Pressable
           onPress={() => router.back()}
           className="mt-5 rounded-2xl bg-[#7B61FF] px-6 py-3"
         >
-          <Text className="font-medium text-white">Go Back</Text>
+          <Text className="font-medium text-white">{t("common.back")}</Text>
         </Pressable>
       </View>
     );
@@ -267,7 +299,9 @@ export default function CheckoutRoute() {
             <ArrowLeft size={24} color="#111827" />
           </Pressable>
 
-          <Text className="text-2xl font-semibold text-gray-900">Checkout</Text>
+          <Text className="text-2xl font-semibold text-gray-900">
+            {t("checkout.title")}
+          </Text>
         </View>
       </View>
 
@@ -279,7 +313,7 @@ export default function CheckoutRoute() {
       >
         <View className="mt-6 px-6">
           <Text className="mb-3 text-lg font-semibold text-gray-900">
-            Selected Plan
+            {t("checkout.selectedPlan")}
           </Text>
 
           <View className="rounded-3xl bg-[#7B61FF] p-5">
@@ -294,7 +328,7 @@ export default function CheckoutRoute() {
 
               <View className="flex-1">
                 <Text className="mb-1 text-xl font-semibold text-white">
-                  {display?.name} eSIM
+                  {translateName(display?.name)} eSIM
                 </Text>
 
                 <Text className="text-sm text-white/90">
@@ -304,7 +338,7 @@ export default function CheckoutRoute() {
             </View>
 
             <View className="flex-row items-end justify-between border-t border-white/20 pt-3">
-              <Text className="text-sm text-white/90">Plan Price</Text>
+              <Text className="text-sm text-white/90">{t("checkout.planPrice")}</Text>
               <Text className="text-2xl font-bold text-white">
                 {formatMoney(planPrice, plan.currency)}
               </Text>
@@ -314,7 +348,7 @@ export default function CheckoutRoute() {
 
         <View className="mt-6 px-6">
           <Text className="mb-3 text-lg font-semibold text-gray-900">
-            Promo Code
+            {t("checkout.promoCode")}
           </Text>
 
           <View className="rounded-2xl border border-gray-100 bg-white p-5">
@@ -327,7 +361,7 @@ export default function CheckoutRoute() {
                 <TextInput
                   value={promoCode}
                   onChangeText={(text) => setPromoCode(text.toUpperCase())}
-                  placeholder="Enter promo code"
+                  placeholder={t("checkout.enterPromo")}
                   placeholderTextColor="#9CA3AF"
                   editable={!appliedPromo}
                   className={`rounded-xl bg-gray-50 py-3 pl-12 pr-4 text-gray-900 ${
@@ -355,7 +389,7 @@ export default function CheckoutRoute() {
                       promoCode ? "text-white" : "text-gray-400"
                     }`}
                   >
-                    Apply
+                    {t("common.apply")}
                   </Text>
                 )}
               </Pressable>
@@ -365,7 +399,7 @@ export default function CheckoutRoute() {
               <View className="mt-3 flex-row items-center gap-2">
                 <Check size={16} color="#047857" />
                 <Text className="text-sm text-green-700">
-                  Promo code applied successfully!
+                  {t("checkout.promoAppliedBang")}
                 </Text>
               </View>
             ) : null}
@@ -374,11 +408,11 @@ export default function CheckoutRoute() {
 
         <View className="mt-6 px-6">
           <Text className="mb-3 text-lg font-semibold text-gray-900">
-            Payment Method
+            {t("checkout.paymentMethod")}
           </Text>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {paymentMethods.map(({ id, label, icon: Icon }) => {
+            {paymentMethods.map(({ id, labelKey, icon: Icon }) => {
               const isSelected = selectedPayment === id;
 
               return (
@@ -408,7 +442,7 @@ export default function CheckoutRoute() {
                       isSelected ? "text-[#7B61FF]" : "text-gray-900"
                     }`}
                   >
-                    {label}
+                    {t(labelKey)}
                   </Text>
                 </Pressable>
               );
@@ -418,12 +452,12 @@ export default function CheckoutRoute() {
 
         <View className="mt-6 px-6">
           <Text className="mb-3 text-lg font-semibold text-gray-900">
-            Order Summary
+            {t("checkout.orderSummary")}
           </Text>
 
           <View className="rounded-2xl border border-gray-100 bg-white p-5">
             <View className="mb-3 flex-row justify-between">
-              <Text className="text-gray-700">Plan Price</Text>
+              <Text className="text-gray-700">{t("checkout.planPrice")}</Text>
               <Text className="font-medium text-gray-900">
                 {formatMoney(planPrice, plan.currency)}
               </Text>
@@ -431,7 +465,7 @@ export default function CheckoutRoute() {
 
             {appliedPromo ? (
               <View className="mb-3 flex-row justify-between">
-                <Text className="text-green-600">Discount</Text>
+                <Text className="text-green-600">{t("common.discount")}</Text>
                 <Text className="font-medium text-green-600">
                   -{formatMoney(discount, plan.currency)}
                 </Text>
@@ -439,14 +473,16 @@ export default function CheckoutRoute() {
             ) : null}
 
             <View className="mb-3 flex-row justify-between">
-              <Text className="text-gray-700">Taxes & Fees</Text>
+              <Text className="text-gray-700">{t("checkout.taxesFees")}</Text>
               <Text className="font-medium text-gray-900">
                 {formatMoney(taxes, plan.currency)}
               </Text>
             </View>
 
             <View className="mt-3 flex-row justify-between border-t border-gray-200 pt-3">
-              <Text className="text-lg font-semibold text-gray-900">Total</Text>
+              <Text className="text-lg font-semibold text-gray-900">
+                {t("common.total")}
+              </Text>
               <Text className="text-lg font-bold text-[#7B61FF]">
                 {formatMoney(total, plan.currency)}
               </Text>
@@ -456,9 +492,9 @@ export default function CheckoutRoute() {
 
         <View className="mt-6 px-6">
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {trustBadges.map(({ icon: Icon, label }) => (
+            {trustBadges.map(({ icon: Icon, labelKey }) => (
               <View
-                key={label}
+                key={labelKey}
                 className="items-center rounded-2xl bg-white p-4"
                 style={{ width: "48%" }}
               >
@@ -467,7 +503,7 @@ export default function CheckoutRoute() {
                 </View>
 
                 <Text className="text-center text-xs font-medium text-gray-700">
-                  {label}
+                  {t(labelKey)}
                 </Text>
               </View>
             ))}
@@ -476,17 +512,17 @@ export default function CheckoutRoute() {
 
         <View className="mt-6 px-6">
           <Text className="mb-3 text-lg font-semibold text-gray-900">
-            What happens next?
+            {t("checkout.whatNext")}
           </Text>
 
           <View className="rounded-2xl border border-gray-100 bg-white p-5">
-            {benefits.map(({ icon: Icon, label }) => (
-              <View key={label} className="mb-3 flex-row items-center gap-3">
+            {benefits.map(({ icon: Icon, labelKey }) => (
+              <View key={labelKey} className="mb-3 flex-row items-center gap-3">
                 <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#F5F0FF]">
                   <Icon size={18} color="#7B61FF" />
                 </View>
 
-                <Text className="flex-1 text-sm text-gray-700">{label}</Text>
+                <Text className="flex-1 text-sm text-gray-700">{t(labelKey)}</Text>
               </View>
             ))}
           </View>
@@ -495,7 +531,7 @@ export default function CheckoutRoute() {
 
       <View className="border-t border-gray-200 bg-white px-6 pb-8 pt-4">
         <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-sm text-gray-500">Total</Text>
+          <Text className="text-sm text-gray-500">{t("common.total")}</Text>
           <Text className="text-2xl font-bold text-gray-900">
             {formatMoney(total, plan.currency)}
           </Text>
@@ -514,7 +550,11 @@ export default function CheckoutRoute() {
           }`}
         >
           <Text className="text-center font-medium text-white">
-            {purchasePending ? "Completing..." : "Complete Purchase"}
+            {purchasePending
+              ? t("checkout.completing")
+              : selectedPayment === "sepay"
+                ? t("checkout.paySepay")
+                : t("checkout.completePurchase")}
           </Text>
         </Pressable>
       </View>

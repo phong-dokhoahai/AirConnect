@@ -25,6 +25,7 @@ import {
 
 import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
+import { useI18n } from "@/lib/i18n";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -34,42 +35,38 @@ type IconComponent = React.ComponentType<{
 
 const features: {
   icon: IconComponent;
-  label: string;
+  labelKey: string;
   color: string;
 }[] = [
-  { icon: Zap, label: "Instant Activation", color: "#7B61FF" },
-  { icon: QrCode, label: "QR Code Delivery", color: "#5B8DEF" },
-  { icon: Signal, label: "5G Support", color: "#7B61FF" },
-  { icon: Wifi, label: "Hotspot Support", color: "#5B8DEF" },
-  { icon: Phone, label: "Keep Your Number", color: "#7B61FF" },
+  { icon: Zap, labelKey: "plan.instantActivation", color: "#7B61FF" },
+  { icon: QrCode, labelKey: "plan.qrDelivery", color: "#5B8DEF" },
+  { icon: Signal, labelKey: "plan.support5g", color: "#7B61FF" },
+  { icon: Wifi, labelKey: "plan.hotspotSupport", color: "#5B8DEF" },
+  { icon: Phone, labelKey: "plan.keepNumber", color: "#7B61FF" },
 ];
 
 const networks = [
-  { name: "NTT Docomo", coverage: "Nationwide", quality: "Excellent" },
-  { name: "SoftBank", coverage: "Major Cities", quality: "Great" },
-  { name: "KDDI", coverage: "Nationwide", quality: "Excellent" },
+  { name: "NTT Docomo", coverageKey: "plan.nationwide", qualityKey: "plan.excellent" },
+  { name: "SoftBank", coverageKey: "plan.majorCities", qualityKey: "plan.great" },
+  { name: "KDDI", coverageKey: "plan.nationwide", qualityKey: "plan.excellent" },
 ];
 
 const faqs = [
   {
-    question: "How does eSIM work?",
-    answer:
-      "An eSIM is a digital SIM that lets you activate a cellular plan without a physical SIM card. Simply scan the QR code we send you, and you're connected instantly.",
+    questionKey: "plan.howEsimWorks",
+    answerKey: "plan.howEsimWorksAnswer",
   },
   {
-    question: "When does activation start?",
-    answer:
-      "Your plan activates when you first connect to a mobile network in the destination country. The validity period starts from this moment.",
+    questionKey: "plan.activationStart",
+    answerKey: "plan.activationStartAnswer",
   },
   {
-    question: "Can I use hotspot?",
-    answer:
-      "Yes! This plan includes full hotspot/tethering support, so you can share your connection with other devices.",
+    questionKey: "plan.useHotspot",
+    answerKey: "plan.useHotspotAnswer",
   },
   {
-    question: "Is my device compatible?",
-    answer:
-      "Most modern smartphones support eSIM, including iPhone XS and newer, Google Pixel 3 and newer, and Samsung Galaxy S20 and newer. Check your device settings to confirm.",
+    questionKey: "plan.deviceCompatible",
+    answerKey: "plan.deviceCompatibleAnswer",
   },
 ];
 
@@ -92,8 +89,8 @@ const relatedPlans = [
   },
   {
     id: "3",
-    data: "Unlimited",
-    validity: "15 Days",
+    data: "common.unlimited",
+    validity: "15 common.days",
     network: "5G",
     price: "$24.99",
     savings: "15%",
@@ -163,15 +160,15 @@ function formatPrice(value: number | string, currency: string) {
   }).format(toNumber(value));
 }
 
-function formatData(plan: PlanDetails) {
-  if (plan.is_unlimited) return "Unlimited";
+function formatData(plan: PlanDetails, unlimitedLabel: string) {
+  if (plan.is_unlimited) return unlimitedLabel;
 
   const amount = toNumber(plan.data_amount_gb);
   return `${Number.isInteger(amount) ? amount : amount.toFixed(2)}GB`;
 }
 
-function formatValidity(days: number) {
-  return `${days} ${days === 1 ? "Day" : "Days"}`;
+function formatValidity(days: number, dayLabel: string) {
+  return `${days} ${dayLabel}`;
 }
 
 function flagFromIso2(iso2: string | null | undefined) {
@@ -199,6 +196,7 @@ function getNetworkLabel(plan: PlanDetails) {
 
 export default function PlanDetailRoute() {
   const router = useRouter();
+  const { t, translateName } = useI18n();
   const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
   const { id = "1" } = useLocalSearchParams<{ id?: string }>();
 
@@ -223,7 +221,7 @@ export default function PlanDetailRoute() {
         if (error || !data) {
           console.error("Plan details load failed", error);
           setPlan(null);
-          setLoadError("Unable to load this plan.");
+          setLoadError(t("plan.unableLoad"));
         } else {
           setPlan(data as unknown as PlanDetails);
         }
@@ -231,7 +229,7 @@ export default function PlanDetailRoute() {
         if (!isMounted) return;
         console.error("Plan details load failed", error);
         setPlan(null);
-        setLoadError("Unable to load this plan.");
+        setLoadError(t("plan.unableLoad"));
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -242,16 +240,16 @@ export default function PlanDetailRoute() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, t]);
 
   const [country] =
     plan?.plan_countries?.flatMap((entry) => rows(entry.countries)) ?? [];
   const [region] =
     plan?.plan_regions?.flatMap((entry) => rows(entry.regions)) ?? [];
-  const destinationName = country?.name ?? region?.name ?? plan?.title ?? "Plan";
+  const destinationName = translateName(country?.name ?? region?.name ?? plan?.title ?? "Plan");
   const destinationFlag = country ? flagFromIso2(country.iso2) : "\uD83C\uDF0D";
-  const dataLabel = plan ? formatData(plan) : "-";
-  const validityLabel = plan ? formatValidity(plan.validity_days) : "-";
+  const dataLabel = plan ? formatData(plan, t("common.unlimited")) : "-";
+  const validityLabel = plan ? formatValidity(plan.validity_days, t("common.days")) : "-";
   const networkLabel = plan ? getNetworkLabel(plan) : "-";
   const priceLabel = plan ? formatPrice(plan.price, plan.currency) : "-";
   const originalPrice = plan ? toNumber(plan.original_price) : 0;
@@ -261,7 +259,7 @@ export default function PlanDetailRoute() {
       : null;
   const savingsLabel =
     plan && (plan.discount_percent ?? 0) > 0
-      ? `Save ${plan.discount_percent}%`
+      ? t("common.save", { value: `${plan.discount_percent}%` })
       : null;
   const perGbLabel =
     plan && !plan.is_unlimited && toNumber(plan.data_amount_gb) > 0
@@ -273,20 +271,24 @@ export default function PlanDetailRoute() {
   const networkRows = plan?.plan_networks?.length
     ? plan.plan_networks.map((network) => ({
         name: network.network_name,
-        coverage: network.coverage_note ?? network.countries?.name ?? "Coverage",
+        coverage: translateName(network.coverage_note ?? network.countries?.name ?? t("common.coverage")),
         quality: network.network_type,
       }))
-    : networks;
+    : networks.map((network) => ({
+        name: network.name,
+        coverage: t(network.coverageKey),
+        quality: t(network.qualityKey),
+      }));
   const includedFeatures = plan?.plan_features?.length
     ? [...plan.plan_features]
         .sort((first, second) => first.sort_order - second.sort_order)
         .map((feature) => feature.label)
-    : features.map((feature) => feature.label);
+    : features.map((feature) => t(feature.labelKey));
   const detailRows = [
-    ["Data", dataLabel],
-    ["Validity", validityLabel],
-    ["Activation Policy", plan?.activation_policy ?? "-"],
-    ["Speed", networkLabel],
+    [t("common.data"), dataLabel],
+    [t("common.validity"), validityLabel],
+    [t("plan.activationPolicy"), plan?.activation_policy ?? "-"],
+    [t("common.speed"), networkLabel],
   ];
 
   const toggleFaq = (index: number) => {
@@ -294,7 +296,7 @@ export default function PlanDetailRoute() {
   };
 
   const handleShare = () => {
-    Alert.alert("Share", "Share functionality coming soon!");
+    Alert.alert(t("plan.share"), t("plan.shareSoon"));
   };
 
   const handleBuyNow = async () => {
@@ -310,7 +312,7 @@ export default function PlanDetailRoute() {
   };
 
   const handleAddToWishlist = () => {
-    Alert.alert("Wishlist", "Added to wishlist!");
+    Alert.alert(t("plan.wishlist"), t("plan.addedWishlist"));
   };
 
   return (
@@ -367,7 +369,7 @@ export default function PlanDetailRoute() {
             <View className="items-center rounded-2xl border border-[#F3F4F6] bg-white p-5">
               <ActivityIndicator color="#7B61FF" />
               <Text className="mt-3 text-sm font-medium text-[#4B5563]">
-                Loading plan...
+                {t("common.loadingPlan")}
               </Text>
             </View>
           </View>
@@ -442,7 +444,7 @@ export default function PlanDetailRoute() {
                   {dataLabel}
                 </Text>
 
-                <Text className="text-xs text-[#4B5563]">Data</Text>
+                <Text className="text-xs text-[#4B5563]">{t("common.data")}</Text>
               </View>
 
               <View className="flex-1 items-center border-x border-[#E5E7EB]">
@@ -450,7 +452,7 @@ export default function PlanDetailRoute() {
                   {validityLabel}
                 </Text>
 
-                <Text className="text-xs text-[#4B5563]">Validity</Text>
+                <Text className="text-xs text-[#4B5563]">{t("common.validity")}</Text>
               </View>
 
               <View className="flex-1 items-center">
@@ -458,13 +460,13 @@ export default function PlanDetailRoute() {
                   {networkLabel}
                 </Text>
 
-                <Text className="text-xs text-[#4B5563]">Network</Text>
+                <Text className="text-xs text-[#4B5563]">{t("common.network")}</Text>
               </View>
             </View>
 
             <View className="pt-4 border-t border-[#F3F4F6] flex-row items-center justify-between">
               <View>
-                <Text className="text-sm text-[#4B5563] mb-1">Total Price</Text>
+                <Text className="text-sm text-[#4B5563] mb-1">{t("common.totalPrice")}</Text>
 
                 <View className="flex-row items-baseline">
                   <Text className="text-3xl font-bold text-[#111827] mr-2">
@@ -480,7 +482,7 @@ export default function PlanDetailRoute() {
               </View>
 
               <View className="items-end">
-                <Text className="text-xs text-[#4B5563] mb-1">Per GB</Text>
+                <Text className="text-xs text-[#4B5563] mb-1">{t("plan.perGb")}</Text>
 
                 <Text className="text-lg font-semibold text-[#7B61FF]">
                   {perGbLabel}
@@ -492,7 +494,7 @@ export default function PlanDetailRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-xl font-semibold text-[#111827] mb-4">
-            {"What's Included"}
+            {t("plan.whatsIncluded")}
           </Text>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
@@ -520,7 +522,7 @@ export default function PlanDetailRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-xl font-semibold text-[#111827] mb-4">
-            Network Coverage
+            {t("plan.networkCoverage")}
           </Text>
 
           <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
@@ -556,7 +558,7 @@ export default function PlanDetailRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-xl font-semibold text-[#111827] mb-4">
-            Plan Details
+            {t("plan.planDetails")}
           </Text>
 
           <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
@@ -574,12 +576,12 @@ export default function PlanDetailRoute() {
             <View className="h-px bg-[#F3F4F6] my-4" />
 
             <View className="flex-row justify-between">
-              <Text className="text-[#4B5563]">Tethering Support</Text>
+              <Text className="text-[#4B5563]">{t("plan.tetheringSupport")}</Text>
 
               <View className="flex-row items-center">
                 <Check size={16} color="#16A34A" />
                 <Text className="font-semibold text-[#16A34A] ml-1">
-                  {plan.tethering_supported ? "Enabled" : "Disabled"}
+                  {plan.tethering_supported ? t("common.enabled") : t("common.disabled")}
                 </Text>
               </View>
             </View>
@@ -588,12 +590,12 @@ export default function PlanDetailRoute() {
 
         <View className="px-6 mt-6">
           <Text className="text-xl font-semibold text-[#111827] mb-4">
-            Frequently Asked Questions
+            {t("plan.faq")}
           </Text>
 
           <View className="bg-white rounded-2xl border border-[#F3F4F6] overflow-hidden">
             {faqs.map((faq, index) => (
-              <View key={faq.question}>
+              <View key={faq.questionKey}>
                 {index > 0 && <View className="h-px bg-[#F3F4F6]" />}
 
                 <Pressable
@@ -601,7 +603,7 @@ export default function PlanDetailRoute() {
                   className="px-5 py-4 flex-row items-center justify-between"
                 >
                   <Text className="font-medium text-[#111827] flex-1 pr-4">
-                    {faq.question}
+                    {t(faq.questionKey)}
                   </Text>
 
                   {expandedFaq === index ? (
@@ -614,7 +616,7 @@ export default function PlanDetailRoute() {
                 {expandedFaq === index && (
                   <View className="px-5 pb-4">
                     <Text className="text-sm text-[#4B5563] leading-5">
-                      {faq.answer}
+                      {t(faq.answerKey)}
                     </Text>
                   </View>
                 )}
@@ -626,7 +628,7 @@ export default function PlanDetailRoute() {
         <View className="mt-6 mb-6">
           <View className="px-6 mb-4">
             <Text className="text-xl font-semibold text-[#111827]">
-              More Plans for {destinationName}
+              {t("plan.morePlansFor", { name: destinationName })}
             </Text>
           </View>
 
@@ -649,11 +651,16 @@ export default function PlanDetailRoute() {
 
                 <View className="mb-3">
                   <Text className="text-2xl font-bold text-[#111827] mb-1">
-                    {plan.data}
+                    {plan.data.includes(".") ? t(plan.data) : plan.data}
                   </Text>
 
                   <Text className="text-xs text-[#4B5563]">
-                    {plan.validity}
+                    {plan.validity.includes("common.")
+                      ? plan.validity
+                          .split(" ")
+                          .map((part) => (part.includes(".") ? t(part) : part))
+                          .join(" ")
+                      : plan.validity}
                   </Text>
                 </View>
 
@@ -677,7 +684,7 @@ export default function PlanDetailRoute() {
       <View className="border-t border-[#E5E7EB] bg-white px-6 py-4">
         <View className="flex-row items-center justify-between mb-4">
           <View>
-            <Text className="text-sm text-[#4B5563]">Total Price</Text>
+            <Text className="text-sm text-[#4B5563]">{t("common.totalPrice")}</Text>
             <Text className="text-2xl font-bold text-[#111827]">
               {priceLabel}
             </Text>
@@ -705,7 +712,9 @@ export default function PlanDetailRoute() {
             onPress={handleAddToWishlist}
             className="flex-1 py-3.5 bg-white border-2 border-[#7B61FF] rounded-2xl items-center mr-3"
           >
-            <Text className="text-[#7B61FF] font-medium">Add to Wishlist</Text>
+            <Text className="text-[#7B61FF] font-medium">
+              {t("plan.addWishlist")}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -717,7 +726,7 @@ export default function PlanDetailRoute() {
                 : "bg-[#7B61FF]"
             }`}
           >
-            <Text className="text-white font-medium">Buy Now</Text>
+            <Text className="text-white font-medium">{t("common.buyNow")}</Text>
           </Pressable>
         </View>
       </View>

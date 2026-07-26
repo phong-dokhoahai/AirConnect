@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { BackButton, Button, Flag } from "@/components/airconnect/ui";
+import { useI18n } from "@/lib/i18n";
 
 type DestinationCountry = {
   id: string;
@@ -41,6 +42,7 @@ const allDestinationCountries: DestinationCountry[] = [
 ];
 
 export default function DestinationRoute() {
+  const { t, translateName } = useI18n();
   const params = useLocalSearchParams<{ purpose?: string }>();
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -85,7 +87,7 @@ export default function DestinationRoute() {
 
       <View className="px-6 pt-16">
         <Text className="text-center text-3xl font-semibold text-gray-950">
-          Where are you going?
+          {t("onboarding.destinationTitle")}
         </Text>
 
         <View className="mt-7 flex-row items-center rounded-2xl bg-gray-50 px-4 py-3">
@@ -94,7 +96,7 @@ export default function DestinationRoute() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search destinations..."
+            placeholder={t("onboarding.searchDestinations")}
             placeholderTextColor="#9CA3AF"
             className="ml-3 flex-1 text-base text-gray-900"
           />
@@ -102,8 +104,8 @@ export default function DestinationRoute() {
 
         <Text className="mb-3 mt-6 text-sm font-bold text-gray-500">
           {showAllDestinations
-            ? "All destinations"
-            : "Popular and Asia destinations"}
+            ? t("onboarding.allDestinations")
+            : t("onboarding.popularAsiaDestinations")}
         </Text>
       </View>
 
@@ -134,7 +136,7 @@ export default function DestinationRoute() {
                     isSelected ? "text-[#6915E0]" : "text-gray-950"
                   }`}
                 >
-                  {country.name}
+                  {translateName(country.name)}
                 </Text>
               </Pressable>
             );
@@ -143,7 +145,7 @@ export default function DestinationRoute() {
           {!showAllDestinations && !query.trim() ? (
             <Pressable
               onPress={() => setShowAllDestinations(true)}
-              accessibilityLabel="Show all destinations"
+              accessibilityLabel={t("onboarding.showAllDestinations")}
               accessibilityRole="button"
               className="w-[48%] items-center rounded-3xl border-2 border-gray-100 bg-white p-4"
             >
@@ -152,7 +154,7 @@ export default function DestinationRoute() {
               </View>
 
               <Text className="mt-3 text-center font-bold text-gray-950">
-                More
+                {t("onboarding.more")}
               </Text>
             </Pressable>
           ) : null}
@@ -161,10 +163,10 @@ export default function DestinationRoute() {
         {!filtered.length ? (
           <View className="items-center rounded-2xl bg-gray-50 p-6">
             <Text className="text-center font-medium text-gray-900">
-              No destination found
+              {t("onboarding.noDestination")}
             </Text>
             <Text className="mt-1 text-center text-sm text-gray-500">
-              Try another popular or Asia destination.
+              {t("onboarding.tryDestination")}
             </Text>
           </View>
         ) : null}
@@ -172,7 +174,7 @@ export default function DestinationRoute() {
 
       <View className="px-6 pb-8">
         <Button
-          label="Continue"
+          label={t("common.continue")}
           disabled={!selected}
           onPress={handleContinue}
         />

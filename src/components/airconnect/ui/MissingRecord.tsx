@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "./Button";
 import { fullScreenShellStyle } from "./layout";
+import { useI18n } from "@/lib/i18n";
 
 export function MissingRecord({
   title,
@@ -13,6 +14,8 @@ export function MissingRecord({
   message: string;
   onBack: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <SafeAreaView
       className="flex-1 bg-gray-50"
@@ -30,7 +33,7 @@ export function MissingRecord({
             {message}
           </Text>
           <View className="mt-8">
-            <Button label="Go Back" onPress={onBack} />
+            <Button label={t("common.back")} onPress={onBack} />
           </View>
         </View>
       </View>

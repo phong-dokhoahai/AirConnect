@@ -31,6 +31,7 @@ import Animated, {
 import { Flag } from "@/components/airconnect/ui";
 import { getProfileUser } from "@/features/profile/utils";
 import { useAuth } from "@/lib/auth";
+import { useI18n, type LanguageCode } from "@/lib/i18n";
 import {
   getPlanDisplay,
   toNumber,
@@ -69,11 +70,11 @@ type UserEsimRow = {
 type FilterType = "all" | "active" | "ready" | "expired";
 
 
-const filters: { key: FilterType; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "ready", label: "Ready to Install" },
-  { key: "expired", label: "Expired" },
+const filters: { key: FilterType; labelKey: string }[] = [
+  { key: "all", labelKey: "common.all" },
+  { key: "active", labelKey: "common.active" },
+  { key: "ready", labelKey: "common.readyToInstall" },
+  { key: "expired", labelKey: "common.expired" },
 ];
 
 function firstRow<T>(value: T | T[] | null | undefined) {
@@ -81,10 +82,10 @@ function firstRow<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "Not started";
+function formatDate(value: string | null, language: LanguageCode) {
+  if (!value) return language === "vi" ? "Chưa bắt đầu" : "Not started";
 
-  return new Date(value).toLocaleDateString("en-US", {
+  return new Date(value).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -111,7 +112,7 @@ function normalizeStatus(
   return status === "active" ? "active" : "ready";
 }
 
-function toCard(row: UserEsimRow): ESIMCard | null {
+function toCard(row: UserEsimRow, language: LanguageCode): ESIMCard | null {
   const plan = firstRow(row.esim_plans);
 
   if (!plan) return null;
@@ -143,17 +144,21 @@ function toCard(row: UserEsimRow): ESIMCard | null {
           ? 0
           : getDaysRemaining(row.expires_at),
     daysTotal: plan.validity_days,
-    expiryDate: formatDate(row.expires_at),
+    expiryDate: formatDate(row.expires_at, language),
     network: display.network,
   };
 }
 
 function StatusBadge({ status }: { status: ESIMCard["status"] }) {
+  const { t } = useI18n();
+
   if (status === "active") {
     return (
       <View className="flex-row items-center px-2.5 py-1 rounded-full bg-[#ECFDF5]">
         <View className="w-1.5 h-1.5 rounded-full bg-[#10B981] mr-1.5" />
-        <Text className="text-xs font-semibold text-[#059669]">Active</Text>
+        <Text className="text-xs font-semibold text-[#059669]">
+          {t("common.active")}
+        </Text>
       </View>
     );
   }
@@ -163,7 +168,7 @@ function StatusBadge({ status }: { status: ESIMCard["status"] }) {
       <View className="flex-row items-center px-2.5 py-1 rounded-full bg-[#F5F0FF]">
         <Signal size={12} color="#6915E0" />
         <Text className="text-xs font-semibold text-[#6915E0] ml-1.5">
-          Ready to Install
+          {t("common.readyToInstall")}
         </Text>
       </View>
     );
@@ -172,7 +177,9 @@ function StatusBadge({ status }: { status: ESIMCard["status"] }) {
   return (
     <View className="flex-row items-center px-2.5 py-1 rounded-full bg-[#F3F4F6]">
       <View className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] mr-1.5" />
-      <Text className="text-xs font-semibold text-[#6B7280]">Expired</Text>
+      <Text className="text-xs font-semibold text-[#6B7280]">
+        {t("common.expired")}
+      </Text>
     </View>
   );
 }
@@ -188,12 +195,13 @@ function DataProgressBar({
   unit: string;
   status: ESIMCard["status"];
 }) {
+  const { t } = useI18n();
   const [width, setWidth] = useState(0);
 
   const percent = total > 0 ? Math.min((used / total) * 100, 100) : 100;
   const isUnlimited = unit === "%";
   const remaining = isUnlimited
-    ? "Unlimited"
+    ? t("common.unlimited")
     : `${(total - used).toFixed(1)} ${unit}`;
   const totalLabel = isUnlimited ? "∞" : `${total} ${unit}`;
 
@@ -208,7 +216,9 @@ function DataProgressBar({
   return (
     <View>
       <View className="flex-row items-center justify-between mb-1.5">
-        <Text className="text-xs text-[#6B7280]">Data Remaining</Text>
+        <Text className="text-xs text-[#6B7280]">
+          {t("myEsims.dataRemaining")}
+        </Text>
 
         <Text className="text-xs font-semibold text-[#111827]">
           {remaining}
@@ -254,6 +264,7 @@ function ESIMCardItem({
   index: number;
   onViewDetails?: (esim: ESIMCard) => void;
 }) {
+  const { t, translateName } = useI18n();
   const borderColor =
     esim.status === "active"
       ? "border-[#D1FAE5]"
@@ -286,7 +297,9 @@ function ESIMCardItem({
 
           <View className="flex-1 ml-3">
             <View className="flex-row items-center mb-0.5">
-              <Text className="font-bold text-[#111827]">{esim.country}</Text>
+              <Text className="font-bold text-[#111827]">
+                {translateName(esim.country)}
+              </Text>
               <Text className="text-[#D1D5DB] mx-2">·</Text>
               <Text className="text-xs text-[#6B7280] font-medium">
                 {esim.planName}
@@ -333,7 +346,7 @@ function ESIMCardItem({
             </View>
 
             <Text className="text-xs text-[#6B7280] ml-2">
-              {esim.daysRemaining} days left
+              {t("myEsims.daysLeft", { count: esim.daysRemaining })}
             </Text>
           </View>
         )}
@@ -343,7 +356,9 @@ function ESIMCardItem({
             <Calendar size={14} color="#6B7280" />
 
             <Text className="text-xs text-[#6B7280] ml-1.5" numberOfLines={1}>
-              {esim.status === "expired" ? "Expired" : "Expires"}{" "}
+              {esim.status === "expired"
+                ? t("common.expired")
+                : t("common.expires")}{" "}
               {esim.expiryDate}
             </Text>
           </View>
@@ -353,7 +368,7 @@ function ESIMCardItem({
             className="flex-row items-center ml-3"
           >
             <Text className="text-xs font-semibold text-[#6915E0]">
-              View Details
+              {t("common.viewDetails")}
             </Text>
             <ChevronRight size={14} color="#6915E0" />
           </Pressable>
@@ -364,6 +379,8 @@ function ESIMCardItem({
 }
 
 function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
+  const { t } = useI18n();
+
   return (
     <Animated.View
       entering={FadeIn.duration(250)}
@@ -392,10 +409,12 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
         </CustomLinearGradient>
       </View>
 
-      <Text className="font-bold text-[#111827] mb-2">No eSIMs yet</Text>
+      <Text className="font-bold text-[#111827] mb-2">
+        {t("myEsims.noEsims")}
+      </Text>
 
       <Text className="text-sm text-[#6B7280] mb-8 text-center leading-5">
-        Purchase your first eSIM and stay connected anywhere in the world.
+        {t("myEsims.noEsimsBody")}
       </Text>
 
       <Pressable onPress={onBrowse}>
@@ -409,7 +428,9 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
             alignItems: "center",
           }}
         >
-          <Text className="text-white font-semibold mr-2">Browse Plans</Text>
+          <Text className="text-white font-semibold mr-2">
+            {t("common.browsePlans")}
+          </Text>
           <ArrowRight size={16} color="#FFFFFF" />
         </CustomLinearGradient>
       </Pressable>
@@ -419,6 +440,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
 
 export default function MyESIMsRoute() {
   const router = useRouter();
+  const { language, t } = useI18n();
   const {
     user: authUser,
     initializing,
@@ -463,7 +485,7 @@ export default function MyESIMsRoute() {
 
       setEsims(
         ((data ?? []) as unknown as UserEsimRow[])
-          .map(toCard)
+          .map((row) => toCard(row, language))
           .filter((card): card is ESIMCard => Boolean(card)),
       );
     } catch (error) {
@@ -471,7 +493,7 @@ export default function MyESIMsRoute() {
 
       console.error("My eSIMs load failed", error);
       setEsimsError(
-        error instanceof Error ? error.message : "Something went wrong",
+        error instanceof Error ? error.message : t("common.somethingWrong"),
       );
       setEsims([]);
     } finally {
@@ -480,7 +502,7 @@ export default function MyESIMsRoute() {
         setHasLoadedEsims(true);
       }
     }
-  }, [authUser]);
+  }, [authUser, language, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -514,7 +536,7 @@ export default function MyESIMsRoute() {
       <View className="flex-1 items-center justify-center bg-[#F9FAFB] px-6">
         <ActivityIndicator color="#6915E0" />
         <Text className="mt-3 text-sm font-medium text-[#6B7280]">
-          Checking sign in...
+          {t("common.checkingSignIn")}
         </Text>
       </View>
     );
@@ -525,10 +547,10 @@ export default function MyESIMsRoute() {
       <View className="flex-1 bg-[#F9FAFB]">
         <View className="bg-white px-6 pt-14 pb-5">
           <Text className="font-bold text-[#111827] text-[26px]">
-            My eSIMs
+            {t("myEsims.title")}
           </Text>
           <Text className="text-sm text-[#6B7280] mt-0.5">
-            Sign in to view your purchased eSIMs
+            {t("myEsims.signInSubtitle")}
           </Text>
         </View>
 
@@ -539,10 +561,10 @@ export default function MyESIMsRoute() {
             </View>
 
             <Text className="text-2xl font-bold text-[#111827]">
-              Sign in to manage eSIMs
+              {t("myEsims.signInTitle")}
             </Text>
             <Text className="mt-2 text-sm leading-5 text-[#6B7280]">
-              Use Google to access your active, ready, and expired eSIM plans.
+              {t("myEsims.signInBody")}
             </Text>
 
             {error ? (
@@ -564,7 +586,9 @@ export default function MyESIMsRoute() {
                 <Globe size={20} color="#FFFFFF" />
               )}
               <Text className="ml-3 text-base font-bold text-white">
-                {signingIn ? "Opening Google..." : "Continue with Google"}
+                {signingIn
+                  ? t("common.openingGoogle")
+                  : t("common.continueWithGoogle")}
               </Text>
             </Pressable>
           </View>
@@ -573,7 +597,7 @@ export default function MyESIMsRoute() {
     );
   }
 
-  const profileUser = getProfileUser(authUser);
+  const profileUser = getProfileUser(authUser, language);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">
@@ -581,11 +605,11 @@ export default function MyESIMsRoute() {
         <View className="flex-row items-start justify-between mb-1">
           <View>
             <Text className="font-bold text-[#111827] text-[26px]">
-              My eSIMs
+              {t("myEsims.title")}
             </Text>
 
             <Text className="text-sm text-[#6B7280] mt-0.5">
-              Manage your active and upcoming plans
+              {t("myEsims.manageSubtitle")}
             </Text>
           </View>
 
@@ -619,7 +643,9 @@ export default function MyESIMsRoute() {
           <View className="mt-3 flex-row items-center self-start bg-[#ECFDF5] px-3 py-1.5 rounded-full">
             <View className="w-2 h-2 rounded-full bg-[#10B981] mr-2" />
             <Text className="text-xs font-semibold text-[#047857]">
-              {activeCount} plan{activeCount > 1 ? "s" : ""} active
+              {t(activeCount > 1 ? "myEsims.plansActive" : "myEsims.planActive", {
+                count: activeCount,
+              })}
             </Text>
           </View>
         )}
@@ -637,7 +663,7 @@ export default function MyESIMsRoute() {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search country or region"
+              placeholder={t("common.searchCountryRegion")}
               placeholderTextColor="#9CA3AF"
               className="flex-1 ml-3 text-sm text-[#374151]"
             />
@@ -671,13 +697,13 @@ export default function MyESIMsRoute() {
                     }}
                   >
                     <Text className="text-white text-sm font-semibold">
-                      {f.label}
+                      {t(f.labelKey)}
                     </Text>
                   </CustomLinearGradient>
                 ) : (
                   <View className="px-4 py-2 rounded-full bg-white border border-[#E5E7EB]">
                     <Text className="text-[#4B5563] text-sm font-medium">
-                      {f.label}
+                      {t(f.labelKey)}
                     </Text>
                   </View>
                 )}
@@ -691,7 +717,7 @@ export default function MyESIMsRoute() {
             <View className="items-center py-12">
               <ActivityIndicator color="#6915E0" />
               <Text className="mt-3 text-sm font-medium text-[#6B7280]">
-                Loading eSIMs...
+                {t("common.loadingEsims")}
               </Text>
             </View>
           ) : esimsError ? (
@@ -703,7 +729,7 @@ export default function MyESIMsRoute() {
                 onPress={loadEsims}
                 className="mt-4 rounded-2xl bg-[#6915E0] px-5 py-3"
               >
-                <Text className="font-bold text-white">Retry</Text>
+                <Text className="font-bold text-white">{t("common.retry")}</Text>
               </Pressable>
             </View>
           ) : filtered.length > 0 ? (
@@ -731,7 +757,7 @@ export default function MyESIMsRoute() {
               className="py-12 items-center"
             >
               <Text className="text-[#9CA3AF] text-sm">
-                No eSIMs found for &quot;{searchQuery}&quot;
+                {t("myEsims.noResults", { query: searchQuery })}
               </Text>
             </Animated.View>
           ) : (

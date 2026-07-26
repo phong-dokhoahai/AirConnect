@@ -403,7 +403,9 @@ Complete Purchase
 
 Behavior:
 
-* Signed-in checkout creates a persisted paid order and ready eSIM that appears in My eSIMs.
+* Signed-in checkout can create a pending Stripe or SePay payment order with product metadata for future fulfillment.
+* Stripe and SePay webhooks only update payment status on the order.
+* eSIM access is granted by a separate fulfillment service after payment confirmation; payment webhooks must not create or unlock purchased products.
 * Buyer name/email come from the signed-in Google account.
 
 ---
@@ -512,6 +514,23 @@ Sections:
 * Language
 * Currency
 * Settings
+
+Language setting:
+
+* Users can switch the whole app between English and Vietnamese from Profile settings.
+* The selected language is saved locally on the device.
+* UI copy should use the app i18n layer; keep AirConnect as the app name.
+
+Settings details:
+
+* Account, Security, and Support setting rows open in-app detail panels.
+* Detail panels explain the current behavior and next steps for each setting.
+
+Quick actions:
+
+* My eSIMs opens the purchased eSIM list.
+* Transaction History opens the signed-in user's Supabase order history.
+* Saved Destinations and Support open dedicated in-app information screens.
 
 ---
 

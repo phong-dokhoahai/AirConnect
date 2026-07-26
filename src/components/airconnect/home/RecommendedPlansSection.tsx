@@ -1,5 +1,6 @@
 import { Heart } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
+import { useI18n } from "@/lib/i18n";
 
 import type { FeaturedPlan } from "./types";
 
@@ -14,10 +15,12 @@ export function RecommendedPlansSection({
   onToggleFavorite: (planId: string) => void;
   onViewDetails: (planId: string) => void;
 }) {
+  const { t, translateName } = useI18n();
+
   return (
     <View className="px-6 mt-6">
       <Text className="text-lg font-semibold text-[#111827] mb-3">
-        Recommended For You
+        {t("home.recommended")}
       </Text>
 
       {plans.map((plan) => {
@@ -36,7 +39,7 @@ export function RecommendedPlansSection({
                 <View className="flex-row justify-between">
                   <View className="flex-1 pr-3">
                     <Text className="font-semibold text-[#111827]">
-                      {plan.country}
+                      {translateName(plan.country)}
                     </Text>
 
                     <Text className="text-xs text-[#6B7280] mt-1">
@@ -73,7 +76,7 @@ export function RecommendedPlansSection({
                     {plan.savings ? (
                       <View className="bg-[#ECFDF5] px-2 py-1 rounded-full">
                         <Text className="text-xs text-[#15803D]">
-                          Save {plan.savings}
+                          {t("common.save", { value: plan.savings })}
                         </Text>
                       </View>
                     ) : null}

@@ -17,6 +17,7 @@ import type {
 import { getProfileUser } from "@/features/profile/utils";
 import { useAuth } from "@/lib/auth";
 import { getCatalogData } from "@/lib/catalogApi";
+import { useI18n } from "@/lib/i18n";
 
 type CatalogState = {
   popularDestinations: PopularDestination[];
@@ -33,6 +34,7 @@ const emptyCatalog: CatalogState = {
 export default function HomeRoute() {
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const { language, t } = useI18n();
 
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -43,12 +45,12 @@ export default function HomeRoute() {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
 
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
+    if (hour < 12) return t("home.goodMorning");
+    if (hour < 18) return t("home.goodAfternoon");
 
-    return "Good Evening";
-  }, []);
-  const profileUser = authUser ? getProfileUser(authUser) : null;
+    return t("home.goodEvening");
+  }, [t]);
+  const profileUser = authUser ? getProfileUser(authUser, language) : null;
 
   const toggleFavorite = (planId: string) => {
     setFavorites((prev) =>
@@ -117,7 +119,7 @@ export default function HomeRoute() {
       >
         <HomeHeader
           greeting={greeting}
-          userName={profileUser?.name ?? "Traveler"}
+          userName={profileUser?.name ?? t("common.traveler")}
           avatar={profileUser?.avatar ?? "AC"}
           search={search}
           onSearchChange={setSearch}
@@ -127,7 +129,7 @@ export default function HomeRoute() {
         {isCatalogLoading ? (
           <View className="mx-6 mt-6 rounded-2xl border border-[#F3F4F6] bg-white p-4">
             <Text className="text-sm font-medium text-[#4B5563]">
-              Loading catalog...
+              {t("common.loadingCatalog")}
             </Text>
           </View>
         ) : null}
@@ -140,7 +142,7 @@ export default function HomeRoute() {
 
             <Pressable className="mt-3 self-start" onPress={loadCatalog}>
               <Text className="text-sm font-semibold text-[#7B61FF]">
-                Retry
+                {t("common.retry")}
               </Text>
             </Pressable>
           </View>

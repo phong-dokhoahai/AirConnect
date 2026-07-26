@@ -16,6 +16,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Payment testing
+
+Checkout supports Stripe Checkout and SePay bank transfer through Supabase Edge
+Functions. Configure these function secrets before serving or deploying them:
+
+```bash
+supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+supabase secrets set SEPAY_API_KEY=your_sepay_api_key
+supabase secrets set SUPABASE_URL=your_supabase_url SUPABASE_ANON_KEY=your_supabase_anon_key SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+supabase functions deploy stripe-payment
+supabase functions deploy sepay-payment
+```
+
+Payment webhooks only update order payment status. Product access is granted by
+a separate fulfillment service after payment confirmation.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

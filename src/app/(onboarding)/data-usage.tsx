@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { BackButton } from "@/components/airconnect/ui";
+import { useI18n } from "@/lib/i18n";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -13,42 +14,43 @@ type IconComponent = React.ComponentType<{
 
 const usageOptions: {
   id: string;
-  label: string;
+  labelKey: string;
   range: string;
   icon: IconComponent;
-  description: string;
+  descriptionKey: string;
 }[] = [
   {
     id: "light",
-    label: "Light Use",
-    range: "1–3 GB",
+    labelKey: "onboarding.lightUse",
+    range: "1-3 GB",
     icon: Smartphone,
-    description: "Email & messaging",
+    descriptionKey: "onboarding.lightUseDesc",
   },
   {
     id: "moderate",
-    label: "Moderate Use",
-    range: "5–10 GB",
+    labelKey: "onboarding.moderateUse",
+    range: "5-10 GB",
     icon: Wifi,
-    description: "Social media & browsing",
+    descriptionKey: "onboarding.moderateUseDesc",
   },
   {
     id: "heavy",
-    label: "Heavy Use",
+    labelKey: "onboarding.heavyUse",
     range: "20+ GB",
     icon: Video,
-    description: "Streaming & calls",
+    descriptionKey: "onboarding.heavyUseDesc",
   },
   {
     id: "unlimited",
-    label: "Unlimited",
-    range: "No limits",
+    labelKey: "common.unlimited",
+    range: "onboarding.noLimits",
     icon: Infinity,
-    description: "Maximum freedom",
+    descriptionKey: "onboarding.unlimitedDesc",
   },
 ];
 
 export default function DataUsageRoute() {
+  const { t } = useI18n();
   const params = useLocalSearchParams<{
     purpose?: string;
     destinations?: string;
@@ -81,12 +83,13 @@ export default function DataUsageRoute() {
         showsVerticalScrollIndicator={false}
       >
         <Text className="mb-8 text-center text-3xl font-semibold text-gray-900">
-          How much data do you need?
+          {t("onboarding.dataTitle")}
         </Text>
 
         <View className="mx-auto w-full max-w-md gap-3">
-          {usageOptions.map(({ id, label, range, icon: Icon, description }) => {
+          {usageOptions.map(({ id, labelKey, range, icon: Icon, descriptionKey }) => {
             const isSelected = selected === id;
+            const rangeLabel = range.startsWith("onboarding.") ? t(range) : range;
 
             return (
               <Pressable
@@ -117,7 +120,7 @@ export default function DataUsageRoute() {
                         isSelected ? "text-[#7B61FF]" : "text-gray-900"
                       }`}
                     >
-                      {label}
+                      {t(labelKey)}
                     </Text>
 
                     <Text
@@ -125,11 +128,11 @@ export default function DataUsageRoute() {
                         isSelected ? "text-[#7B61FF]" : "text-gray-600"
                       }`}
                     >
-                      {range}
+                      {rangeLabel}
                     </Text>
 
                     <Text className="mt-1 text-xs text-gray-500">
-                      {description}
+                      {t(descriptionKey)}
                     </Text>
                   </View>
                 </View>
@@ -152,7 +155,7 @@ export default function DataUsageRoute() {
               selected ? "text-white" : "text-gray-400"
             }`}
           >
-            Continue
+            {t("common.continue")}
           </Text>
         </Pressable>
       </View>

@@ -2,9 +2,9 @@ import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 
 import { LoadingProfile, SignedOutProfile } from "./components/AuthStates";
-import { LoyaltyCard } from "./components/LoyaltyCard";
 import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
 import { ProfileShell } from "./components/ProfileShell";
 import { SettingsSections } from "./components/SettingsSections";
@@ -23,8 +23,9 @@ export default function ProfileScreen() {
     signInWithGoogle,
     signOut,
   } = useAuth();
+  const { language } = useI18n();
 
-  const profileUser = authUser ? getProfileUser(authUser) : null;
+  const profileUser = authUser ? getProfileUser(authUser, language) : null;
   const rewardsPercent = profileUser
     ? (profileUser.points / profileUser.nextTierPoints) * 100
     : 0;
@@ -57,10 +58,10 @@ export default function ProfileScreen() {
             actions={quickActions}
             onActionPress={(screen) => router.push(screen as never)}
           />
-          <LoyaltyCard
+          {/* <LoyaltyCard
             profileUser={profileUser}
             rewardsBarWidth={preferences.rewardsBarWidth}
-          />
+          /> */}
           <SettingsSections
             pushEnabled={preferences.pushEnabled}
             setPushEnabled={preferences.setPushEnabled}

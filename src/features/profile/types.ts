@@ -19,7 +19,7 @@ export type ProfileUser = {
 };
 
 export type StatItem = {
-  label: string;
+  labelKey: string;
   value: string;
   icon: IconComponent;
   from: string;
@@ -28,8 +28,8 @@ export type StatItem = {
 
 export type QuickAction = {
   icon: IconComponent;
-  label: string;
-  sub: string;
+  labelKey: string;
+  subKey: string;
   screen: string;
   from: string;
   to: string;
@@ -39,6 +39,7 @@ export type SettingRow = {
   icon: IconComponent;
   label: string;
   sub: string;
+  accessibilityLabel?: string;
   toggle?: boolean;
   toggled?: boolean;
   danger?: boolean;

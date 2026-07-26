@@ -1,4 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Clock, Edit3, Star } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
@@ -9,6 +10,8 @@ export function ProfileHeaderCard({
 }: {
   profileUser: ProfileUser;
 }) {
+  const { t, translateName } = useI18n();
+
   return (
     <View className="bg-white rounded-[28px] overflow-hidden border border-gray-100">
       <CustomLinearGradient
@@ -32,7 +35,7 @@ export function ProfileHeaderCard({
           <Pressable className="flex-row items-center bg-gray-100 px-4 py-2 rounded-full">
             <Edit3 size={14} color="#374151" />
             <Text className="ml-2 text-sm font-semibold text-gray-700">
-              Edit
+              {t("profile.edit")}
             </Text>
           </Pressable>
         </View>
@@ -47,14 +50,14 @@ export function ProfileHeaderCard({
           <View className="flex-row items-center bg-[#F5F0FF] px-3 py-2 rounded-full mr-2">
             <Star size={14} color="#6915E0" />
             <Text className="text-xs font-semibold text-[#6915E0] ml-1">
-              {profileUser.tier}
+              {translateName(profileUser.tier)}
             </Text>
           </View>
 
           <View className="flex-row items-center bg-gray-100 px-3 py-2 rounded-full">
             <Clock size={12} color="#6B7280" />
             <Text className="text-xs text-gray-500 ml-1">
-              Member since {profileUser.memberSince}
+              {t("profile.memberSince", { date: profileUser.memberSince })}
             </Text>
           </View>
         </View>

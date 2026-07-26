@@ -1,4 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Pressable, Text, View } from "react-native";
 
 import { SectionHeader } from "./SectionHeader";
@@ -11,9 +12,11 @@ export function RegionalPlansSection({
   plans: RegionalPlan[];
   onViewDetails: (planId: string) => void;
 }) {
+  const { t, translateName } = useI18n();
+
   return (
     <View className="px-6 mt-6">
-      <SectionHeader title="Regional Plans" />
+      <SectionHeader title={t("home.regionalPlans")} />
 
       <View className="flex-row flex-wrap justify-between gap-y-3">
         {plans.map((item) => (
@@ -37,14 +40,16 @@ export function RegionalPlansSection({
               <Text style={{ fontSize: 22 }}>{item.icon}</Text>
             </CustomLinearGradient>
 
-            <Text className="font-semibold text-[#111827]">{item.name}</Text>
+            <Text className="font-semibold text-[#111827]">
+              {translateName(item.name)}
+            </Text>
 
             <Text className="text-xs text-[#6B7280] mt-1">
-              {item.countries} countries
+              {t("home.countriesCount", { count: item.countries })}
             </Text>
 
             <Text className="text-[#7B61FF] mt-2 font-medium">
-              From {item.price}
+              {t("common.from", { value: item.price })}
             </Text>
           </Pressable>
         ))}

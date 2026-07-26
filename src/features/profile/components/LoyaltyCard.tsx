@@ -1,4 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
+import { useI18n } from "@/lib/i18n";
 import { Gift } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
@@ -12,9 +13,11 @@ export function LoyaltyCard({
   profileUser: ProfileUser;
   rewardsBarWidth: number;
 }) {
+  const { t, translateName } = useI18n();
+
   return (
     <View className="mt-5">
-      <SectionTitle title="Loyalty" />
+      <SectionTitle title={t("profile.loyalty")} />
 
       <CustomLinearGradient
         colors={["#6915E0", "#9864E1"]}
@@ -24,27 +27,31 @@ export function LoyaltyCard({
           <View>
             <View className="flex-row items-center">
               <Gift size={16} color="#FFFFFF" />
-              <Text className="text-white ml-2">Travel Rewards</Text>
+              <Text className="text-white ml-2">{t("profile.travelRewards")}</Text>
             </View>
 
             <Text className="text-white text-2xl font-bold mt-2">
-              {profileUser.points.toLocaleString()} pts
+              {t("profile.points", {
+                value: profileUser.points.toLocaleString(),
+              })}
             </Text>
           </View>
 
           <View className="bg-white/20 px-3 py-2 rounded-full">
             <Text className="text-white text-xs font-bold">
-              {profileUser.tier}
+              {translateName(profileUser.tier)}
             </Text>
           </View>
         </View>
 
         <View className="mb-4">
           <View className="flex-row justify-between mb-2">
-            <Text className="text-xs text-white/80">{profileUser.tier}</Text>
+            <Text className="text-xs text-white/80">
+              {translateName(profileUser.tier)}
+            </Text>
 
             <Text className="text-xs text-white/80">
-              {profileUser.nextTier}
+              {translateName(profileUser.nextTier)}
             </Text>
           </View>
 
@@ -56,13 +63,17 @@ export function LoyaltyCard({
           </View>
 
           <Text className="text-xs text-white/80 mt-2">
-            {(profileUser.nextTierPoints - profileUser.points).toLocaleString()}{" "}
-            pts to {profileUser.nextTier}
+            {t("profile.pointsToTier", {
+              points: (profileUser.nextTierPoints - profileUser.points).toLocaleString(),
+              tier: translateName(profileUser.nextTier),
+            })}
           </Text>
         </View>
 
         <Pressable className="bg-white rounded-2xl py-3 items-center">
-          <Text className="font-bold text-[#6915E0]">View Rewards</Text>
+          <Text className="font-bold text-[#6915E0]">
+            {t("profile.viewRewards")}
+          </Text>
         </Pressable>
       </CustomLinearGradient>
     </View>

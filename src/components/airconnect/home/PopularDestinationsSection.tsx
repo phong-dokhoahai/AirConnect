@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useI18n } from "@/lib/i18n";
 
 import { SectionHeader } from "./SectionHeader";
 import type { PopularDestination } from "./types";
@@ -8,10 +9,12 @@ export function PopularDestinationsSection({
 }: {
   destinations: PopularDestination[];
 }) {
+  const { t, translateName } = useI18n();
+
   return (
     <View className="mt-6">
       <View className="px-6">
-        <SectionHeader title="Popular Destinations" />
+        <SectionHeader title={t("home.popularDestinations")} />
       </View>
 
       <ScrollView
@@ -32,11 +35,11 @@ export function PopularDestinationsSection({
               className="font-semibold text-[#111827] mt-2"
               numberOfLines={2}
             >
-              {item.name}
+              {translateName(item.name)}
             </Text>
 
             <Text className="text-[#7B61FF] text-sm mt-1">
-              From {item.price}
+              {t("common.from", { value: item.price })}
             </Text>
           </Pressable>
         ))}

@@ -39,6 +39,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { getPlanDetails } from "@/lib/catalogQueries";
+import { useI18n, type LanguageCode } from "@/lib/i18n";
 import {
   getPlanDisplay,
   toNumber,
@@ -81,15 +82,20 @@ type ESIMPlanRow = PlanDisplayRow & {
   plan_networks?: { network_name: string }[] | null;
 };
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-US", {
+function formatDate(date: Date, language: LanguageCode) {
+  return date.toLocaleDateString(language === "vi" ? "vi" : "en-US", {
     month: "long",
     day: "2-digit",
     year: "numeric",
   });
 }
 
-function buildESIMData(plan: ESIMPlanRow) {
+function buildESIMData(
+  plan: ESIMPlanRow,
+  language: LanguageCode,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  translateName: (value: string | null | undefined) => string,
+) {
   const display = getPlanDisplay(plan);
   const start = new Date();
   const expiry = new Date(start);
@@ -102,20 +108,20 @@ function buildESIMData(plan: ESIMPlanRow) {
   return {
     id: plan.id,
     flag: display.flag,
-    country: display.name,
-    planName: plan.title,
-    data: display.data,
-    days: display.validity,
+    country: translateName(display.name),
+    planName: t("esim.premiumDataPlan", { name: translateName(display.name) }),
+    data: plan.is_unlimited ? t("common.unlimited") : display.data,
+    days: t("esim.daysValue", { count: plan.validity_days }),
     status: "ready" as ESIMStatus,
     network: display.network,
     dataUsedGB: 0,
     dataTotalGB,
     daysRemaining: plan.validity_days,
     daysTotal: plan.validity_days,
-    startDate: formatDate(start),
-    expiryDate: formatDate(expiry),
-    coverage: display.name,
-    networkStatus: "Ready",
+    startDate: formatDate(start, language),
+    expiryDate: formatDate(expiry, language),
+    coverage: translateName(display.name),
+    networkStatus: t("common.readyToInstall"),
     iccid: `Pending-${plan.id}`,
     activationCode: `LPA:1$airconnect.example$${plan.id}`,
     smdpAddress: "airconnect.example",
@@ -260,6 +266,7 @@ function CopyField({
   value: string;
   sensitive?: boolean;
 }) {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(!sensitive);
   const [copied, setCopied] = useState(false);
 
@@ -275,7 +282,7 @@ function CopyField({
 
   const handleCopy = () => {
     setCopied(true);
-    Alert.alert("Copied", value);
+    Alert.alert(t("common.copied"), value);
 
     setTimeout(() => {
       setCopied(false);
@@ -324,11 +331,13 @@ function CopyField({
 }
 
 function StatusBadge({ status }: { status: ESIMStatus }) {
+  const { t } = useI18n();
+
   if (status === "active") {
     return (
       <View className="flex-row items-center px-3 py-1.5 rounded-full bg-[#10B981]">
         <View className="w-1.5 h-1.5 rounded-full bg-white mr-1.5" />
-        <Text className="text-white text-xs font-bold">ACTIVE</Text>
+        <Text className="text-white text-xs font-bold">{t("common.active")}</Text>
       </View>
     );
   }
@@ -346,7 +355,9 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
         }}
       >
         <Signal size={12} color="#FFFFFF" />
-        <Text className="text-white text-xs font-bold ml-1.5">READY</Text>
+        <Text className="text-white text-xs font-bold ml-1.5">
+          {t("common.readyToInstall")}
+        </Text>
       </CustomLinearGradient>
     );
   }
@@ -354,7 +365,9 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
   return (
     <View className="flex-row items-center px-3 py-1.5 rounded-full bg-[#E5E7EB]">
       <View className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] mr-1.5" />
-      <Text className="text-[#6B7280] text-xs font-bold">EXPIRED</Text>
+      <Text className="text-[#6B7280] text-xs font-bold">
+        {t("common.expired")}
+      </Text>
     </View>
   );
 }
@@ -362,6 +375,7 @@ function StatusBadge({ status }: { status: ESIMStatus }) {
 export default function ESIMDetailsRoute() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const { language, t, translateName } = useI18n();
 
   const [activationExpanded, setActivationExpanded] = useState(false);
   const [copiedOrderId, setCopiedOrderId] = useState(false);
@@ -381,7 +395,7 @@ export default function ESIMDetailsRoute() {
 
         if (error || !data) {
           console.error("eSIM details load failed", error);
-          setLoadError("Unable to load this eSIM.");
+          setLoadError(t("esim.unableLoad"));
         } else {
           setPlan(data as unknown as ESIMPlanRow);
           setLoadError(null);
@@ -390,7 +404,7 @@ export default function ESIMDetailsRoute() {
       .catch((error) => {
         if (isMounted) {
           console.error("eSIM details load failed", error);
-          setLoadError("Unable to load this eSIM.");
+          setLoadError(t("esim.unableLoad"));
         }
       })
       .finally(() => {
@@ -400,9 +414,9 @@ export default function ESIMDetailsRoute() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, t]);
 
-  const e = plan ? buildESIMData(plan) : esimData;
+  const e = plan ? buildESIMData(plan, language, t, translateName) : esimData;
   const dataPercent = e.dataTotalGB ? (e.dataUsedGB / e.dataTotalGB) * 100 : 0;
   const daysPercent = e.daysTotal ? (e.daysRemaining / e.daysTotal) * 100 : 0;
 
@@ -418,7 +432,9 @@ export default function ESIMDetailsRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-[#F9FAFB]">
         <ActivityIndicator color="#6915E0" />
-        <Text className="mt-3 text-sm text-[#6B7280]">Loading eSIM...</Text>
+        <Text className="mt-3 text-sm text-[#6B7280]">
+          {t("esim.loading")}
+        </Text>
       </View>
     );
   }
@@ -427,13 +443,13 @@ export default function ESIMDetailsRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-[#F9FAFB] px-6">
         <Text className="text-center text-lg font-bold text-[#111827]">
-          {loadError ?? (id ? "eSIM unavailable." : "Missing eSIM.")}
+          {loadError ?? (id ? t("esim.unavailable") : t("esim.missing"))}
         </Text>
         <Pressable
           onPress={() => router.back()}
           className="mt-5 rounded-2xl bg-[#6915E0] px-6 py-3"
         >
-          <Text className="font-bold text-white">Go Back</Text>
+          <Text className="font-bold text-white">{t("common.back")}</Text>
         </Pressable>
       </View>
     );
@@ -441,7 +457,7 @@ export default function ESIMDetailsRoute() {
 
   const handleCopyOrder = () => {
     setCopiedOrderId(true);
-    Alert.alert("Copied", e.id);
+    Alert.alert(t("common.copied"), e.id);
 
     setTimeout(() => {
       setCopiedOrderId(false);
@@ -457,28 +473,28 @@ export default function ESIMDetailsRoute() {
   }[] = [
     {
       icon: Calendar,
-      label: "Start Date",
+      label: t("esim.startDate"),
       value: e.startDate,
       color: "#3B82F6",
       bg: "#EFF6FF",
     },
     {
       icon: Calendar,
-      label: "Expiry Date",
+      label: t("esim.expiryDate"),
       value: e.expiryDate,
       color: "#6915E0",
       bg: "#F5F0FF",
     },
     {
       icon: Globe,
-      label: "Coverage",
+      label: t("common.coverage"),
       value: e.coverage,
       color: "#10B981",
       bg: "#ECFDF5",
     },
     {
       icon: Signal,
-      label: "Network",
+      label: t("common.network"),
       value: e.networkStatus,
       color: "#22C55E",
       bg: "#F0FDF4",
@@ -497,7 +513,7 @@ export default function ESIMDetailsRoute() {
 
         <View className="flex-1 items-center">
           <Text className="font-bold text-[#111827] text-[17px]">
-            eSIM Details
+            {t("esim.details")}
           </Text>
         </View>
 
@@ -570,7 +586,9 @@ export default function ESIMDetailsRoute() {
               onPress={handleCopyOrder}
               className="mt-4 flex-row items-center bg-white/15 rounded-xl px-3 py-2"
             >
-              <Text className="text-xs text-white/70 mr-2">Order ID:</Text>
+              <Text className="text-xs text-white/70 mr-2">
+                {t("success.orderId", { value: "" })}
+              </Text>
 
               <Text className="text-xs text-white flex-1">{e.id}</Text>
 
@@ -587,7 +605,7 @@ export default function ESIMDetailsRoute() {
           <SectionCard className="w-[48%]">
             <View className="p-4 items-center">
               <Text className="text-xs font-semibold text-[#6B7280] mb-3">
-                Data Remaining
+                {t("myEsims.dataRemaining")}
               </Text>
 
               <View className="relative items-center justify-center mb-3">
@@ -598,12 +616,14 @@ export default function ESIMDetailsRoute() {
                     {(e.dataTotalGB - e.dataUsedGB).toFixed(1)}
                   </Text>
 
-                  <Text className="text-[#6B7280] text-[10px]">GB left</Text>
+                  <Text className="text-[#6B7280] text-[10px]">
+                    {t("esim.gbLeft")}
+                  </Text>
                 </View>
               </View>
 
               <Text className="text-xs text-[#6B7280]">
-                of{" "}
+                {t("esim.of")}{" "}
                 <Text className="font-semibold text-[#374151]">
                   {e.dataTotalGB} GB
                 </Text>
@@ -614,7 +634,7 @@ export default function ESIMDetailsRoute() {
           <SectionCard className="w-[48%]">
             <View className="p-4 items-center">
               <Text className="text-xs font-semibold text-[#6B7280] mb-3">
-                Days Remaining
+                {t("esim.daysRemaining")}
               </Text>
 
               <View className="relative items-center justify-center mb-3">
@@ -625,18 +645,20 @@ export default function ESIMDetailsRoute() {
                     {e.daysRemaining}
                   </Text>
 
-                  <Text className="text-[#6B7280] text-[10px]">days</Text>
+                  <Text className="text-[#6B7280] text-[10px]">
+                    {t("common.days")}
+                  </Text>
                 </View>
               </View>
 
               <View className="flex-row items-center">
                 <Calendar size={12} color="#6B7280" />
                 <Text className="text-xs text-[#6B7280] ml-1">
-                  of{" "}
+                  {t("esim.of")}{" "}
                   <Text className="font-semibold text-[#374151]">
                     {e.daysTotal}
                   </Text>{" "}
-                  days
+                  {t("common.days")}
                 </Text>
               </View>
             </View>
@@ -647,7 +669,7 @@ export default function ESIMDetailsRoute() {
           <SectionCard>
             <View className="p-5">
               <Text className="font-bold text-[#111827] mb-4">
-                Plan Details
+                {t("plan.planDetails")}
               </Text>
 
               <View className="flex-row flex-wrap justify-between gap-y-4">
@@ -697,24 +719,24 @@ export default function ESIMDetailsRoute() {
               </View>
 
               <Text className="font-bold text-white mb-1.5">
-                Install Your eSIM
+                {t("esim.installYourEsim")}
               </Text>
 
               <Text className="text-white/80 text-sm mb-5 leading-5">
-                Follow a few simple steps to activate your connection.
+                {t("esim.installBody")}
               </Text>
 
               <Pressable className="w-full py-3.5 bg-white rounded-2xl items-center justify-center flex-row mb-2.5">
                 <Zap size={16} color="#6915E0" />
                 <Text className="text-[#6915E0] font-bold text-sm ml-2">
-                  View Installation Guide
+                  {t("esim.viewInstallGuide")}
                 </Text>
               </Pressable>
 
               <Pressable className="w-full py-3 bg-white/20 rounded-2xl items-center justify-center flex-row">
                 <Play size={16} color="#FFFFFF" />
                 <Text className="text-white font-semibold text-sm ml-2">
-                  Watch Tutorial
+                  {t("esim.watchTutorial")}
                 </Text>
               </Pressable>
             </CustomLinearGradient>
@@ -730,17 +752,19 @@ export default function ESIMDetailsRoute() {
                 </View>
 
                 <View className="flex-1">
-                  <Text className="font-bold text-[#111827]">QR Code</Text>
+                  <Text className="font-bold text-[#111827]">
+                    {t("esim.qrCode")}
+                  </Text>
 
                   <Text className="text-xs text-[#6B7280]">
-                    Scan to install your eSIM
+                    {t("esim.scanToInstall")}
                   </Text>
                 </View>
 
                 <View className="flex-row items-center bg-[#ECFDF5] px-2.5 py-1 rounded-full">
                   <CheckCircle size={12} color="#059669" />
                   <Text className="text-xs font-semibold text-[#059669] ml-1">
-                    Verified
+                    {t("esim.verified")}
                   </Text>
                 </View>
               </View>
@@ -771,7 +795,7 @@ export default function ESIMDetailsRoute() {
                   <Pressable className="flex-1 flex-row items-center justify-center py-3 bg-[#F3F4F6] rounded-2xl mr-3">
                     <Download size={16} color="#374151" />
                     <Text className="text-sm font-semibold text-[#374151] ml-2">
-                      Download
+                      {t("esim.download")}
                     </Text>
                   </Pressable>
 
@@ -788,7 +812,7 @@ export default function ESIMDetailsRoute() {
                     >
                       <Share2 size={16} color="#FFFFFF" />
                       <Text className="text-sm font-semibold text-white ml-2">
-                        Share
+                        {t("plan.share")}
                       </Text>
                     </CustomLinearGradient>
                   </Pressable>
@@ -810,11 +834,11 @@ export default function ESIMDetailsRoute() {
 
               <View className="flex-1">
                 <Text className="font-bold text-[#111827]">
-                  Activation Details
+                  {t("esim.activationDetails")}
                 </Text>
 
                 <Text className="text-xs text-[#6B7280]">
-                  ICCID, activation code & address
+                  {t("esim.activationDetailsSub")}
                 </Text>
               </View>
 
@@ -839,13 +863,13 @@ export default function ESIMDetailsRoute() {
 
                 <View className="mb-3">
                   <CopyField
-                    label="Activation Code"
+                    label={t("esim.activationCode")}
                     value={e.activationCode}
                     sensitive
                   />
                 </View>
 
-                <CopyField label="SM-DP+ Address" value={e.smdpAddress} />
+                <CopyField label={t("esim.smdpAddress")} value={e.smdpAddress} />
               </Animated.View>
             )}
           </SectionCard>
@@ -861,11 +885,13 @@ export default function ESIMDetailsRoute() {
 
                 <View>
                   <Text className="font-bold text-[#111827]">
-                    Supported Networks
+                    {t("esim.supportedNetworks")}
                   </Text>
 
                   <Text className="text-xs text-[#6B7280]">
-                    {e.supportedNetworks.length} carriers
+                    {t("esim.carriersCount", {
+                      count: e.supportedNetworks.length,
+                    })}
                   </Text>
                 </View>
               </View>
@@ -890,11 +916,15 @@ export default function ESIMDetailsRoute() {
         <View className="mt-4">
           <SectionCard>
             <View className="p-5">
-              <Text className="font-bold text-[#111827] mb-4">Data Usage</Text>
+              <Text className="font-bold text-[#111827] mb-4">
+                {t("esim.dataUsage")}
+              </Text>
 
               <View className="flex-row items-center justify-between mb-3">
                 <View className="items-center">
-                  <Text className="text-xs text-[#6B7280] mb-1">Used</Text>
+                  <Text className="text-xs text-[#6B7280] mb-1">
+                    {t("esim.used")}
+                  </Text>
 
                   <Text className="font-bold text-[#111827]">
                     {e.dataUsedGB} GB
@@ -923,7 +953,9 @@ export default function ESIMDetailsRoute() {
                 </View>
 
                 <View className="items-center">
-                  <Text className="text-xs text-[#6B7280] mb-1">Remaining</Text>
+                  <Text className="text-xs text-[#6B7280] mb-1">
+                    {t("esim.remaining")}
+                  </Text>
 
                   <Text className="font-bold text-[#6915E0]">
                     {(e.dataTotalGB - e.dataUsedGB).toFixed(1)} GB
@@ -933,12 +965,18 @@ export default function ESIMDetailsRoute() {
 
               <View className="flex-row items-center justify-between pt-3 border-t border-[#F9FAFB]">
                 <Text className="text-xs text-[#6B7280]">
-                  {((e.dataUsedGB / e.dataTotalGB) * 100).toFixed(0)}% used
+                  {t("esim.usedPercent", {
+                    value: ((e.dataUsedGB / e.dataTotalGB) * 100).toFixed(0),
+                  })}
                 </Text>
 
                 <Text className="text-xs font-semibold text-[#059669]">
                   {((1 - e.dataUsedGB / e.dataTotalGB) * 100).toFixed(0)}%
-                  remaining
+                  {t("esim.remainingPercent", {
+                    value: ((1 - e.dataUsedGB / e.dataTotalGB) * 100).toFixed(
+                      0,
+                    ),
+                  })}
                 </Text>
               </View>
             </View>
@@ -954,10 +992,12 @@ export default function ESIMDetailsRoute() {
                 </View>
 
                 <View className="flex-1">
-                  <Text className="font-bold text-[#111827]">Need Help?</Text>
+                  <Text className="font-bold text-[#111827]">
+                    {t("esim.needHelp")}
+                  </Text>
 
                   <Text className="text-sm text-[#6B7280]">
-                    Our support team is available 24/7.
+                    {t("esim.support247Body")}
                   </Text>
                 </View>
               </View>
@@ -979,11 +1019,11 @@ export default function ESIMDetailsRoute() {
 
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-[#111827]">
-                    Live Chat
+                    {t("esim.liveChat")}
                   </Text>
 
                   <Text className="text-xs text-[#6B7280]">
-                    Avg. response &lt; 2 min
+                    {t("esim.avgResponse")}
                   </Text>
                 </View>
 
@@ -997,10 +1037,12 @@ export default function ESIMDetailsRoute() {
 
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-[#111827]">
-                    Contact Support
+                    {t("profile.contactSupport")}
                   </Text>
 
-                  <Text className="text-xs text-[#6B7280]">Email or phone</Text>
+                  <Text className="text-xs text-[#6B7280]">
+                    {t("esim.emailOrPhone")}
+                  </Text>
                 </View>
               </Pressable>
 
@@ -1011,11 +1053,11 @@ export default function ESIMDetailsRoute() {
 
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-[#111827]">
-                    Troubleshooting Guide
+                    {t("esim.troubleshootingGuide")}
                   </Text>
 
                   <Text className="text-xs text-[#6B7280]">
-                    Step-by-step solutions
+                    {t("esim.stepSolutions")}
                   </Text>
                 </View>
               </Pressable>
@@ -1035,7 +1077,9 @@ export default function ESIMDetailsRoute() {
                 alignItems: "center",
               }}
             >
-              <Text className="text-white font-bold text-sm">Manage eSIM</Text>
+              <Text className="text-white font-bold text-sm">
+                {t("esim.manage")}
+              </Text>
             </CustomLinearGradient>
           </Pressable>
 
@@ -1043,7 +1087,7 @@ export default function ESIMDetailsRoute() {
             <Zap size={16} color="#6915E0" />
 
             <Text className="text-[#374151] font-semibold text-sm ml-2">
-              Reinstall eSIM
+              {t("esim.reinstall")}
             </Text>
           </Pressable>
         </View>

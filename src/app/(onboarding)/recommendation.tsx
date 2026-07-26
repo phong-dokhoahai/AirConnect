@@ -13,22 +13,23 @@ import {
 import { BackButton, Flag } from "@/components/airconnect/ui";
 import { useAuth } from "@/lib/auth";
 import { getActiveRecommendationPlans } from "@/lib/catalogQueries";
+import { useI18n } from "@/lib/i18n";
 
 const purposeLabels: Record<string, string> = {
-  vacation: "Vacation",
-  business: "Business",
-  study: "Study",
-  "long-term": "Long-Term Stay",
-  "digital-nomad": "Digital Nomad",
+  vacation: "onboarding.vacation",
+  business: "onboarding.business",
+  study: "onboarding.study",
+  "long-term": "onboarding.longTerm",
+  "digital-nomad": "onboarding.digitalNomad",
 };
 
 type UsageTier = "light" | "moderate" | "heavy" | "unlimited";
 
 const usageLabels: Record<UsageTier, string> = {
-  light: "Light",
-  moderate: "Moderate",
-  heavy: "Heavy",
-  unlimited: "Unlimited",
+  light: "onboarding.lightUse",
+  moderate: "onboarding.moderateUse",
+  heavy: "onboarding.heavyUse",
+  unlimited: "common.unlimited",
 };
 
 type CountryRow = {
@@ -120,15 +121,15 @@ function formatPrice(value: number | string, currency: string) {
   }).format(toNumber(value));
 }
 
-function formatData(plan: RecommendationPlan) {
-  if (plan.is_unlimited) return "Unlimited";
+function formatData(plan: RecommendationPlan, unlimitedLabel: string) {
+  if (plan.is_unlimited) return unlimitedLabel;
 
   const amount = toNumber(plan.data_amount_gb);
   return `${Number.isInteger(amount) ? amount : amount.toFixed(2)} GB`;
 }
 
-function formatValidity(days: number) {
-  return `${days} ${days === 1 ? "Day" : "Days"}`;
+function formatValidity(days: number, dayLabel: string) {
+  return `${days} ${dayLabel}`;
 }
 
 function getPlanCoverageIso2s(plan: RecommendationPlan) {
@@ -197,8 +198,8 @@ function getBestPlan(
     })[0];
 }
 
-function getNetworkLabel(plan: RecommendationPlan | null) {
-  if (!plan) return "Unavailable";
+function getNetworkLabel(plan: RecommendationPlan | null, unavailableLabel: string) {
+  if (!plan) return unavailableLabel;
 
   const networkTypes = new Set(
     (plan.plan_networks ?? []).map((network) => network.network_type),
@@ -209,14 +210,14 @@ function getNetworkLabel(plan: RecommendationPlan | null) {
   return "4G";
 }
 
-function getPlanFeatures(plan: RecommendationPlan | null) {
+function getPlanFeatures(plan: RecommendationPlan | null, fallback: string[]) {
   const features = [...(plan?.plan_features ?? [])]
     .sort((first, second) => first.sort_order - second.sort_order)
     .map((feature) => feature.label);
 
   return features.length
     ? features
-    : ["Instant activation", "No physical SIM needed", "Keep your number"];
+    : fallback;
 }
 
 function InfoBox({ label, value }: { label: string; value: string }) {
@@ -247,6 +248,7 @@ function NetworkRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function RecommendationRoute() {
+  const { t, translateName } = useI18n();
   const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
   const {
     purpose = "vacation",
@@ -264,14 +266,16 @@ export default function RecommendationRoute() {
     .filter(Boolean);
   const primaryDestinationId = destinationIds[0] ?? "jp";
   const primaryDestinationCode = primaryDestinationId.toUpperCase();
-  const primaryDestinationName = getDestinationName(primaryDestinationId);
+  const primaryDestinationName = translateName(getDestinationName(primaryDestinationId));
   const destinationSummary =
     destinationIds.length > 1
-      ? `${primaryDestinationName} + ${destinationIds.length - 1} more`
+      ? `${primaryDestinationName} + ${t("recommendation.moreCount", {
+          count: destinationIds.length - 1,
+        })}`
       : primaryDestinationName;
-  const purposeLabel = purposeLabels[purpose] ?? toTitleCase(purpose);
+  const purposeLabel = purposeLabels[purpose] ? t(purposeLabels[purpose]) : translateName(toTitleCase(purpose));
   const usageLabel =
-    usageLabels[usage as UsageTier] ?? toTitleCase(usage || "moderate");
+    usageLabels[usage as UsageTier] ? t(usageLabels[usage as UsageTier]) : translateName(toTitleCase(usage || "moderate"));
   const [plans, setPlans] = useState<RecommendationPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -285,7 +289,7 @@ export default function RecommendationRoute() {
 
         if (error) {
           console.error("Recommendation plan load failed", error);
-          setLoadError("Unable to check matching packages right now.");
+          setLoadError(t("recommendation.noActivePackage"));
           setPlans([]);
         } else {
           setLoadError(null);
@@ -295,7 +299,7 @@ export default function RecommendationRoute() {
       .catch((error) => {
         if (isMounted) {
           console.error("Recommendation plan load failed", error);
-          setLoadError("Unable to check matching packages right now.");
+          setLoadError(t("recommendation.noActivePackage"));
           setPlans([]);
         }
       })
@@ -308,18 +312,22 @@ export default function RecommendationRoute() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
   const selectedPlan = getBestPlan(plans, destinationIds, usage) ?? null;
   const recommendation = selectedPlan
     ? {
-        data: formatData(selectedPlan),
-        validity: formatValidity(selectedPlan.validity_days),
+        data: formatData(selectedPlan, t("common.unlimited")),
+        validity: formatValidity(selectedPlan.validity_days, t("common.days")),
         price: formatPrice(selectedPlan.price, selectedPlan.currency),
       }
     : null;
-  const featureLabels = getPlanFeatures(selectedPlan);
-  const networkLabel = getNetworkLabel(selectedPlan);
+  const featureLabels = getPlanFeatures(selectedPlan, [
+    t("onboarding.instantActivation"),
+    t("checkout.noPhysicalSim"),
+    t("plan.keepNumber"),
+  ]).map(translateName);
+  const networkLabel = getNetworkLabel(selectedPlan, t("common.unavailable"));
 
   const handleBuyNow = async () => {
     if (!selectedPlan) return;
@@ -352,7 +360,7 @@ export default function RecommendationRoute() {
         showsVerticalScrollIndicator={false}
       >
         <Text className="mb-8 text-center text-3xl font-semibold text-gray-900">
-          Recommended for you
+          {t("recommendation.title")}
         </Text>
 
         <View className="mx-auto w-full max-w-md">
@@ -376,7 +384,7 @@ export default function RecommendationRoute() {
                 <View className="flex-row items-center gap-2">
                   <Signal size={16} color="#FFFFFF" />
                   <Text className="text-sm text-white/90">
-                    {networkLabel} Coverage
+                    {networkLabel} {t("common.coverage")}
                   </Text>
                 </View>
               </View>
@@ -386,7 +394,7 @@ export default function RecommendationRoute() {
               <View className="mb-6 flex-row items-center gap-2 rounded-2xl bg-white/10 p-3">
                 <ActivityIndicator color="#FFFFFF" />
                 <Text className="text-sm text-white/90">
-                  Checking matching package...
+                  {t("recommendation.checking")}
                 </Text>
               </View>
             ) : null}
@@ -395,15 +403,15 @@ export default function RecommendationRoute() {
               <View className="mb-6 rounded-2xl bg-white/10 p-3">
                 <Text className="text-sm text-white/90">
                   {loadError ??
-                    "No active Supabase package matches this destination and usage yet."}
+                    t("recommendation.noActivePackage")}
                 </Text>
               </View>
             ) : null}
 
             {recommendation ? (
               <View className="mb-6 flex-row gap-4">
-                <InfoBox label="Data" value={recommendation.data} />
-                <InfoBox label="Validity" value={recommendation.validity} />
+                <InfoBox label={t("common.data")} value={recommendation.data} />
+                <InfoBox label={t("common.validity")} value={recommendation.validity} />
               </View>
             ) : null}
 
@@ -415,9 +423,9 @@ export default function RecommendationRoute() {
 
             <View className="flex-row items-end justify-between">
               <View>
-                <Text className="text-sm text-white/70">Total Price</Text>
+                <Text className="text-sm text-white/70">{t("common.totalPrice")}</Text>
                 <Text className="text-3xl font-bold text-white">
-                  {recommendation?.price ?? "Unavailable"}
+                  {recommendation?.price ?? t("common.unavailable")}
                 </Text>
               </View>
             </View>
@@ -426,7 +434,7 @@ export default function RecommendationRoute() {
           <View className="mb-6 flex-row items-center justify-center gap-2">
             <Zap size={16} color="#7B61FF" />
             <Text className="text-sm text-gray-600">
-              Activation in under 2 minutes
+              {t("recommendation.activationUnderTwo")}
             </Text>
           </View>
 
@@ -434,21 +442,21 @@ export default function RecommendationRoute() {
             <View className="mb-3 flex-row items-center gap-2">
               <Globe size={20} color="#7B61FF" />
               <Text className="font-semibold text-gray-900">
-                Network Details
+                {t("recommendation.networkDetails")}
               </Text>
             </View>
 
             <View className="gap-2">
-              <NetworkRow label="Trip Type" value={purposeLabel} />
+              <NetworkRow label={t("recommendation.tripType")} value={purposeLabel} />
               <NetworkRow
-                label="Destinations"
+                label={t("recommendation.destinations")}
                 value={`${destinationIds.length || 1}`}
               />
-              <NetworkRow label="Speed" value={networkLabel} />
-              <NetworkRow label="Coverage" value={destinationSummary} />
+              <NetworkRow label={t("common.speed")} value={networkLabel} />
+              <NetworkRow label={t("common.coverage")} value={destinationSummary} />
               <NetworkRow
-                label="Package"
-                value={selectedPlan?.title ?? "No matching package"}
+                label={t("recommendation.package")}
+                value={selectedPlan?.title ?? t("common.noMatchingPackage")}
               />
             </View>
           </View>
@@ -472,7 +480,7 @@ export default function RecommendationRoute() {
                 : "text-gray-500"
             }`}
           >
-            Buy Now
+            {t("common.buyNow")}
           </Text>
         </Pressable>
 
@@ -481,7 +489,7 @@ export default function RecommendationRoute() {
           className="w-full rounded-2xl border-2 border-gray-200 bg-white px-6 py-4"
         >
           <Text className="text-center font-medium text-gray-700">
-            Browse More Plans
+            {t("common.browseMorePlans")}
           </Text>
         </Pressable>
       </View>

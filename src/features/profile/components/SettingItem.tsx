@@ -11,10 +11,15 @@ export function SettingItem({
   onPress?: () => void;
 }) {
   const Icon = item.icon;
+  const accessibilityLabel = [item.accessibilityLabel ?? item.label, item.sub]
+    .filter(Boolean)
+    .join(": ");
 
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={accessibilityLabel}
       className="flex-row items-center px-4 py-4 border-b border-gray-50"
     >
       <View

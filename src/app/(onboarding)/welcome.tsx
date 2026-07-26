@@ -11,6 +11,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useI18n } from "@/lib/i18n";
 
 function BouncingPin({
   size,
@@ -55,6 +56,7 @@ function BouncingPin({
 }
 
 export default function WelcomeRoute() {
+  const { t } = useI18n();
   const scale = useSharedValue(1);
   const navigateHome = useCallback(() => {
     router.push("/(tabs)/home");
@@ -123,16 +125,18 @@ export default function WelcomeRoute() {
         </View>
 
         <Text className="mb-4 text-center text-3xl font-semibold text-gray-900">
-          Stay Connected Anywhere
+          {t("onboarding.welcomeTitle")}
         </Text>
 
         <Text className="max-w-sm text-center text-base leading-relaxed text-gray-600">
-          Buy and activate eSIMs in minutes for over 200 destinations worldwide.
+          {t("onboarding.welcomeBody")}
         </Text>
 
         <View className="mt-8 flex-row items-center gap-2 rounded-full bg-gray-50 px-4 py-2">
           <Signal size={16} color="#7B61FF" />
-          <Text className="text-sm text-gray-700">Instant activation</Text>
+          <Text className="text-sm text-gray-700">
+            {t("onboarding.instantActivation")}
+          </Text>
         </View>
       </View>
 
@@ -142,12 +146,14 @@ export default function WelcomeRoute() {
           className="w-full rounded-2xl bg-[#7B61FF] px-6 py-4"
         >
           <Text className="text-center font-medium text-white">
-            Get Started
+            {t("onboarding.getStarted")}
           </Text>
         </Pressable>
 
         <Pressable onPress={navigateHome} className="w-full px-6 py-4">
-          <Text className="text-center font-medium text-gray-600">Skip</Text>
+          <Text className="text-center font-medium text-gray-600">
+            {t("onboarding.skip")}
+          </Text>
         </Pressable>
       </View>
     </View>

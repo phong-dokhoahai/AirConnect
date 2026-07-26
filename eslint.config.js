@@ -6,5 +6,8 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ["dist/*", "srcWeb/**"],
+    rules: {
+      "import/namespace": "off",
+    },
   }
 ]);

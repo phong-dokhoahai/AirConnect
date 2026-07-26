@@ -1,13 +1,15 @@
 import type { ESIMStatus } from "@/constants/airconnect";
+import { useI18n } from "@/lib/i18n";
 import { Badge } from "./Badge";
 
 export function StatusBadge({ status }: { status: ESIMStatus }) {
+  const { t } = useI18n();
   const label =
     status === "active"
-      ? "Active"
+      ? t("common.active")
       : status === "ready"
-        ? "Ready to Install"
-        : "Expired";
+        ? t("common.readyToInstall")
+        : t("common.expired");
   const tone =
     status === "active"
       ? "bg-emerald-50 text-emerald-700"

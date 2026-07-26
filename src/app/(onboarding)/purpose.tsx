@@ -10,16 +10,18 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { BackButton } from "@/components/airconnect/ui";
+import { useI18n } from "@/lib/i18n";
 
 const purposes = [
-  { id: "vacation", label: "Vacation", icon: Palmtree },
-  { id: "business", label: "Business", icon: Briefcase },
-  { id: "study", label: "Study", icon: GraduationCap },
-  { id: "long-term", label: "Long-Term Stay", icon: Home },
-  { id: "digital-nomad", label: "Digital Nomad", icon: Laptop },
+  { id: "vacation", labelKey: "onboarding.vacation", icon: Palmtree },
+  { id: "business", labelKey: "onboarding.business", icon: Briefcase },
+  { id: "study", labelKey: "onboarding.study", icon: GraduationCap },
+  { id: "long-term", labelKey: "onboarding.longTerm", icon: Home },
+  { id: "digital-nomad", labelKey: "onboarding.digitalNomad", icon: Laptop },
 ];
 
 export default function TravelPurposeRoute() {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
 
   const handleContinue = () => {
@@ -43,11 +45,11 @@ export default function TravelPurposeRoute() {
         showsVerticalScrollIndicator={false}
       >
         <Text className="mb-8 text-center text-3xl font-semibold text-gray-900">
-          What brings you abroad?
+          {t("onboarding.purposeTitle")}
         </Text>
 
         <View className="mx-auto w-full max-w-md gap-3">
-          {purposes.map(({ id, label, icon: Icon }) => {
+          {purposes.map(({ id, labelKey, icon: Icon }) => {
             const isSelected = selected === id;
 
             return (
@@ -73,7 +75,7 @@ export default function TravelPurposeRoute() {
                     isSelected ? "text-[#7B61FF]" : "text-gray-900"
                   }`}
                 >
-                  {label}
+                  {t(labelKey)}
                 </Text>
               </Pressable>
             );
@@ -94,7 +96,7 @@ export default function TravelPurposeRoute() {
               selected ? "text-white" : "text-gray-400"
             }`}
           >
-            Continue
+            {t("common.continue")}
           </Text>
         </Pressable>
       </View>
