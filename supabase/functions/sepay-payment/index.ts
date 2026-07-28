@@ -38,6 +38,36 @@ function env(name: string) {
   return Deno.env.get(name)?.trim() ?? "";
 }
 
+function requireSupabaseConfig() {
+  if (!env("SUPABASE_URL") || !env("SUPABASE_ANON_KEY")) {
+    return "Missing Supabase function configuration";
+  }
+  return "";
+}
+
+function sepayBankConfig() {
+  return {
+    bankCode: env("SEPAY_BANK_CODE") || "TCB",
+    accountNumber: (env("SEPAY_ACCOUNT_NUMBER") || "19070208496017").replaceAll(" ", ""),
+    accountHolder: env("SEPAY_ACCOUNT_HOLDER") || "DO KHOA HAI PHONG",
+  };
+}
+
+function buildQrUrl(paymentCode: string, amount: number) {
+  const bank = sepayBankConfig();
+  const params = new URLSearchParams({
+    acc: bank.accountNumber,
+    bank: bank.bankCode,
+    amount: String(Math.round(amount)),
+    des: paymentCode,
+    template: "compact",
+    showinfo: "true",
+    holder: bank.accountHolder,
+  });
+
+  return `https://vietqr.app/img?${params.toString()}`;
+}
+
 function safeEqual(first: string, second: string) {
   if (first.length !== second.length) return false;
   let diff = 0;
@@ -108,6 +138,9 @@ Deno.serve(async (request: Request) => {
   const body = JSON.parse(rawBody) as CreateBody;
   if (body.action !== "create") return json({ error: "Invalid action" }, 400);
 
+  const configError = requireSupabaseConfig();
+  if (configError) return json({ error: configError }, 500);
+
   const order = await supabaseRpc<
     { order_id: string; total_amount: number; currency: string; payment_code: string }[]
   >(
@@ -127,10 +160,18 @@ Deno.serve(async (request: Request) => {
   const row = order.data?.[0];
   if (order.error || !row) return json({ error: order.error ?? "Unable to create order" }, 400);
 
+  const bank = sepayBankConfig();
+
   return json({
     orderId: row.order_id,
     amount: row.total_amount,
     currency: row.currency,
     paymentCode: row.payment_code,
+    bankCode: bank.bankCode,
+    bankName: bank.bankCode,
+    accountNumber: bank.accountNumber,
+    accountHolder: bank.accountHolder,
+    qrUrl: buildQrUrl(row.payment_code, row.total_amount),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
   });
 });

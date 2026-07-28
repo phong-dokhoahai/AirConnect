@@ -48,11 +48,11 @@ begin
     raise exception 'Unsupported payment provider';
   end if;
 
-  select id, price, currency
+  select ep.id, ep.price, ep.currency
   into v_plan
-  from public.esim_plans
-  where id = p_plan_id
-    and is_active = true;
+  from public.esim_plans ep
+  where ep.id = p_plan_id
+    and ep.is_active = true;
 
   if not found then
     raise exception 'Plan unavailable';

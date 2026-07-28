@@ -14,12 +14,16 @@ route: 'one-shot'
 
 **Approach:** Add a complete SQL migration for countries, regions, plan targeting, networks, features, RLS policies, indexes, triggers, and seed data, plus TypeScript Supabase query examples for the frontend.
 
+**Catalog data rule:** `esim_plans.title` stores only the plan name. Data amount and validity are stored in `data_amount_gb`, `is_unlimited`, and `validity_days`.
+
 ## Suggested Review Order
 
 **Database Schema**
 
 - Catalog tables, constraints, indexes, RLS policies, triggers, and seed data.
   [`20260626000000_create_product_catalog.sql:1`](../../supabase/migrations/20260626000000_create_product_catalog.sql#L1)
+- Seed title normalization keeps data amount and validity out of `esim_plans.title`.
+  [`20260728000000_normalize_esim_plan_titles.sql:1`](../../supabase/migrations/20260728000000_normalize_esim_plan_titles.sql#L1)
 
 **Frontend Query Examples**
 

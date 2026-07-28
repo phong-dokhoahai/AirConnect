@@ -28,11 +28,21 @@ type StripePaymentResponse = {
   checkoutUrl: string;
 };
 
-type SepayPaymentResponse = {
+export type SepayPaymentResponse = {
   orderId: string;
   amount: number;
   currency: string;
   paymentCode: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  qrUrl: string;
+  expiresAt: string;
+};
+
+type PaymentOrderStatus = {
+  status: "paid" | "pending" | "failed" | "canceled";
 };
 
 export function createStripeCheckoutPayment(input: StripePaymentInput) {
@@ -51,4 +61,32 @@ export function createSepayPendingPayment(input: PaymentInput) {
       ...input,
     },
   });
+}
+
+export function getPaymentOrderStatus(orderId: string) {
+  return supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single<PaymentOrderStatus>();
+}
+
+export async function getPaymentErrorMessage(error: unknown, fallback: string) {
+  const context = (error as { context?: Response })?.context;
+
+  if (context) {
+    try {
+      const body = (await context.clone().json()) as {
+        error?: string | { message?: string };
+        message?: string;
+      };
+      return typeof body.error === "string"
+        ? body.error
+        : body.error?.message ?? body.message ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  return error instanceof Error ? error.message : fallback;
 }

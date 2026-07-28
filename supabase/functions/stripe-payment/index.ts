@@ -33,6 +33,13 @@ function env(name: string) {
   return Deno.env.get(name)?.trim() ?? "";
 }
 
+function requireSupabaseConfig() {
+  if (!env("SUPABASE_URL") || !env("SUPABASE_ANON_KEY")) {
+    return "Missing Supabase function configuration";
+  }
+  return "";
+}
+
 function form(input: Record<string, string>) {
   const params = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => params.append(key, value));
@@ -138,6 +145,9 @@ Deno.serve(async (request: Request) => {
 
   const body = JSON.parse(rawBody) as CreateBody;
   if (body.action !== "create") return json({ error: "Invalid action" }, 400);
+
+  const configError = requireSupabaseConfig();
+  if (configError) return json({ error: configError }, 500);
 
   const order = await supabaseRpc<
     { order_id: string; total_amount: number; currency: string; payment_code: string }[]

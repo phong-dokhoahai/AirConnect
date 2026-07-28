@@ -24,10 +24,14 @@ Functions. Configure these function secrets before serving or deploying them:
 ```bash
 supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 supabase secrets set SEPAY_API_KEY=your_sepay_api_key
-supabase secrets set SUPABASE_URL=your_supabase_url SUPABASE_ANON_KEY=your_supabase_anon_key SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+supabase secrets set SEPAY_BANK_CODE=TCB SEPAY_ACCOUNT_NUMBER=19070208496017 SEPAY_ACCOUNT_HOLDER="DO KHOA HAI PHONG"
 supabase functions deploy stripe-payment
 supabase functions deploy sepay-payment
 ```
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are
+provided by Supabase Edge Functions automatically; the CLI rejects setting them
+as custom secrets.
 
 Payment webhooks only update order payment status. Product access is granted by
 a separate fulfillment service after payment confirmation.

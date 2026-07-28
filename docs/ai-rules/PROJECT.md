@@ -404,6 +404,7 @@ Complete Purchase
 Behavior:
 
 * Signed-in checkout can create a pending Stripe or SePay payment order with product metadata for future fulfillment.
+* SePay checkout renders VietQR bank transfer details from Edge Function configuration and waits for webhook confirmation.
 * Stripe and SePay webhooks only update payment status on the order.
 * eSIM access is granted by a separate fulfillment service after payment confirmation; payment webhooks must not create or unlock purchased products.
 * Buyer name/email come from the signed-in Google account.

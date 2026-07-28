@@ -161,15 +161,27 @@ const en: Dictionary = {
   "checkout.activationUnderTwo": "Activation in Under 2 Minutes",
   "checkout.noPhysicalSim": "No Physical SIM Required",
   "checkout.keepNumber": "Keep Your Existing Number",
-  "checkout.completePurchase": "Complete Purchase",
+  "checkout.completePurchase": "Purchase",
   "checkout.completing": "Completing...",
   "checkout.paySepay": "Create SePay transfer",
   "checkout.unableStartStripe": "Unable to start Stripe payment.",
   "checkout.paymentPending": "Payment is pending confirmation.",
-  "checkout.sepayPending": "Transfer with content {{code}}. Payment will update after SePay confirms it.",
+  "checkout.paymentConfirmed": "Payment confirmed.",
+  "checkout.paymentFailed": "Payment was not completed.",
+  "checkout.sepayPending":
+    "Transfer with content {{code}}. Payment will update after SePay confirms it.",
+  "checkout.sepayTransferTitle": "Bank transfer details",
+  "checkout.sepayScanHint": "Open your banking app, scan this QR, and confirm the transfer.",
+  "checkout.sepayAmount": "Amount",
+  "checkout.sepayBank": "Bank",
+  "checkout.sepayAccountNumber": "Account number",
+  "checkout.sepayAccountHolder": "Account holder",
+  "checkout.sepayContent": "Transfer content",
+  "checkout.sepayWaiting": "Waiting for SePay confirmation. Keep the transfer content unchanged.",
   "checkout.payVnpay": "Pay with VNPay Sandbox",
   "checkout.unableLoadPackage": "Unable to load this package.",
-  "checkout.emailRequired": "Your account email is required to complete purchase.",
+  "checkout.emailRequired":
+    "Your account email is required to complete purchase.",
   "checkout.unableStartVnpay": "Unable to start VNPay payment.",
   "checkout.vnpayCanceled": "VNPay payment was canceled.",
   "checkout.vnpayNotConfirmed": "VNPay payment was not confirmed.",
@@ -185,7 +197,8 @@ const en: Dictionary = {
   "success.paymentSuccessful": "Payment Successful",
   "success.paymentPending": "Payment Pending",
   "success.ready": "Your eSIM is ready to use.",
-  "success.fulfillmentPending": "Payment is confirmed. Your eSIM will appear after fulfillment.",
+  "success.fulfillmentPending":
+    "Payment is confirmed. Your eSIM will appear after fulfillment.",
   "success.orderId": "Order ID: {{value}}",
   "success.purchaseDate": "Purchase Date: {{value}}",
   "success.esimStatus": "eSIM Status",
@@ -259,7 +272,7 @@ const en: Dictionary = {
     "Purchase your first eSIM and stay connected anywhere in the world.",
   "myEsims.dataRemaining": "Data Remaining",
   "myEsims.daysLeft": "{{count}} days left",
-  "myEsims.noResults": "No eSIMs found for \"{{query}}\"",
+  "myEsims.noResults": 'No eSIMs found for "{{query}}"',
   "esim.activationCode": "Activation Code",
   "esim.activationDetails": "Activation Details",
   "esim.activationDetailsSub": "ICCID, activation code & address",
@@ -369,86 +382,119 @@ const en: Dictionary = {
   "profile.detail.personalInformation.title": "Personal Information",
   "profile.detail.personalInformation.body":
     "Your profile details help AirConnect prepare checkout, receipts, and eSIM support faster.",
-  "profile.detail.personalInformation.row1": "Name and email come from your signed-in account.",
-  "profile.detail.personalInformation.row2": "Phone number is optional and can be used for support follow-up.",
-  "profile.detail.personalInformation.row3": "Profile data stays tied to your AirConnect account.",
+  "profile.detail.personalInformation.row1":
+    "Name and email come from your signed-in account.",
+  "profile.detail.personalInformation.row2":
+    "Phone number is optional and can be used for support follow-up.",
+  "profile.detail.personalInformation.row3":
+    "Profile data stays tied to your AirConnect account.",
   "profile.detail.paymentMethods.title": "Payment Methods",
   "profile.detail.paymentMethods.body":
     "Manage the payment options available during checkout.",
-  "profile.detail.paymentMethods.row1": "VNPay sandbox is available for test purchases.",
-  "profile.detail.paymentMethods.row2": "Cards and wallets are listed as upcoming options.",
-  "profile.detail.paymentMethods.row3": "Payment details are handled by the payment provider.",
+  "profile.detail.paymentMethods.row1":
+    "VNPay sandbox is available for test purchases.",
+  "profile.detail.paymentMethods.row2":
+    "Cards and wallets are listed as upcoming options.",
+  "profile.detail.paymentMethods.row3":
+    "Payment details are handled by the payment provider.",
   "profile.detail.changePassword.title": "Change Password",
   "profile.detail.changePassword.body":
     "AirConnect currently uses Google sign-in, so password changes are managed by your Google account.",
-  "profile.detail.changePassword.row1": "Use your Google account security page to change password.",
-  "profile.detail.changePassword.row2": "Sign out of unknown devices after changing password.",
-  "profile.detail.changePassword.row3": "Return to AirConnect and sign in again if needed.",
+  "profile.detail.changePassword.row1":
+    "Use your Google account security page to change password.",
+  "profile.detail.changePassword.row2":
+    "Sign out of unknown devices after changing password.",
+  "profile.detail.changePassword.row3":
+    "Return to AirConnect and sign in again if needed.",
   "profile.detail.manageDevices.title": "Manage Devices",
   "profile.detail.manageDevices.body":
     "Review where your AirConnect account is active and keep access under control.",
-  "profile.detail.manageDevices.row1": "Current device keeps your active session.",
+  "profile.detail.manageDevices.row1":
+    "Current device keeps your active session.",
   "profile.detail.manageDevices.row2": "Sign out to end this device session.",
-  "profile.detail.manageDevices.row3": "Use Google account security to remove unknown sessions.",
+  "profile.detail.manageDevices.row3":
+    "Use Google account security to remove unknown sessions.",
   "profile.detail.privacySettings.title": "Privacy Settings",
   "profile.detail.privacySettings.body":
     "Control the account data AirConnect uses to provide eSIM purchases and support.",
-  "profile.detail.privacySettings.row1": "Order and eSIM records are used for service delivery.",
-  "profile.detail.privacySettings.row2": "Notification preferences can be changed anytime.",
-  "profile.detail.privacySettings.row3": "Support may use order details to resolve issues.",
+  "profile.detail.privacySettings.row1":
+    "Order and eSIM records are used for service delivery.",
+  "profile.detail.privacySettings.row2":
+    "Notification preferences can be changed anytime.",
+  "profile.detail.privacySettings.row3":
+    "Support may use order details to resolve issues.",
   "profile.detail.helpCenter.title": "Help Center",
   "profile.detail.helpCenter.body":
     "Find quick guidance for buying, installing, and managing your eSIM.",
-  "profile.detail.helpCenter.row1": "Check device eSIM compatibility before purchase.",
+  "profile.detail.helpCenter.row1":
+    "Check device eSIM compatibility before purchase.",
   "profile.detail.helpCenter.row2": "Install with the QR code after checkout.",
-  "profile.detail.helpCenter.row3": "Keep your primary SIM active for calls and SMS.",
+  "profile.detail.helpCenter.row3":
+    "Keep your primary SIM active for calls and SMS.",
   "profile.detail.contactSupport.title": "Contact Support",
   "profile.detail.contactSupport.body":
     "Contact AirConnect support for checkout, installation, or connection issues.",
   "profile.detail.contactSupport.row1": "Phone: 0965394575",
   "profile.detail.contactSupport.row2": "Email: dokhoahaiphong@gmail.com",
-  "profile.detail.contactSupport.row3": "Include your order ID when asking about a purchase.",
+  "profile.detail.contactSupport.row3":
+    "Include your order ID when asking about a purchase.",
   "profile.detail.faq.title": "FAQ",
   "profile.detail.faq.body":
     "Quick answers for buying and using AirConnect eSIM plans.",
-  "profile.detail.faq.row1": "Where do I receive my eSIM? After checkout, the QR code and activation details are in My eSIMs.",
-  "profile.detail.faq.row2": "When does my plan start? It starts when the eSIM connects to a network at the destination.",
-  "profile.detail.faq.row3": "Do I need to remove my main SIM? No, keep it active for calls and messages.",
+  "profile.detail.faq.row1":
+    "Where do I receive my eSIM? After checkout, the QR code and activation details are in My eSIMs.",
+  "profile.detail.faq.row2":
+    "When does my plan start? It starts when the eSIM connects to a network at the destination.",
+  "profile.detail.faq.row3":
+    "Do I need to remove my main SIM? No, keep it active for calls and messages.",
   "profile.detail.termsPrivacy.title": "Terms & Privacy Policy",
   "profile.detail.termsPrivacy.body":
     "AirConnect uses account and order data to process purchases, deliver eSIMs, and provide support.",
-  "profile.detail.termsPrivacy.row1": "Payment processing follows provider requirements.",
-  "profile.detail.termsPrivacy.row2": "Purchased eSIM records remain available in My eSIMs.",
-  "profile.detail.termsPrivacy.row3": "Contact support for account or order data questions.",
+  "profile.detail.termsPrivacy.row1":
+    "Payment processing follows provider requirements.",
+  "profile.detail.termsPrivacy.row2":
+    "Purchased eSIM records remain available in My eSIMs.",
+  "profile.detail.termsPrivacy.row3":
+    "Contact support for account or order data questions.",
   "profile.quick.orders.title": "Transaction History",
   "profile.quick.orders.body":
     "Review your AirConnect purchases and use order details when you need support.",
-  "profile.quick.orders.row1": "Paid eSIM purchases appear in My eSIMs after checkout.",
-  "profile.quick.orders.row2": "Keep the order ID for payment and activation support.",
-  "profile.quick.orders.row3": "VNPay test purchases are verified before an eSIM is created.",
+  "profile.quick.orders.row1":
+    "Paid eSIM purchases appear in My eSIMs after checkout.",
+  "profile.quick.orders.row2":
+    "Keep the order ID for payment and activation support.",
+  "profile.quick.orders.row3":
+    "VNPay test purchases are verified before an eSIM is created.",
   "profile.quick.saved.title": "Saved Destinations",
   "profile.quick.saved.body":
     "Keep track of destinations you plan to buy eSIM data for later.",
   "profile.quick.saved.row1": "Save countries or regions you visit often.",
-  "profile.quick.saved.row2": "Compare data amount, validity, network, and price before buying.",
-  "profile.quick.saved.row3": "Return to Explore anytime to choose a destination.",
+  "profile.quick.saved.row2":
+    "Compare data amount, validity, network, and price before buying.",
+  "profile.quick.saved.row3":
+    "Return to Explore anytime to choose a destination.",
   "profile.quick.support.title": "Support",
   "profile.quick.support.body":
     "Contact AirConnect support when payment, installation, or connection needs attention.",
   "profile.quick.support.row1": "Phone: 0965394575",
   "profile.quick.support.row2": "Email: dokhoahaiphong@gmail.com",
-  "profile.quick.support.row3": "Include your order ID and screenshots if an issue appears.",
+  "profile.quick.support.row3":
+    "Include your order ID and screenshots if an issue appears.",
   "transactions.title": "Transaction History",
-  "transactions.subtitle": "Track payment status, purchased plans, and order details.",
+  "transactions.subtitle":
+    "Track payment status, purchased plans, and order details.",
   "transactions.loading": "Loading transactions...",
   "transactions.signInTitle": "Sign in to view transactions",
-  "transactions.signInBody": "Use your AirConnect account to view purchased eSIM transactions.",
+  "transactions.signInBody":
+    "Use your AirConnect account to view purchased eSIM transactions.",
   "transactions.emptyTitle": "No transactions",
-  "transactions.emptyBody": "Completed purchases will appear here after checkout.",
+  "transactions.emptyBody":
+    "Completed purchases will appear here after checkout.",
   "transactions.orderId": "Order ID",
   "transactions.paymentMethod": "Payment method",
   "transactions.email": "Email",
-  "transactions.breakdown": "Subtotal {{subtotal}} · Tax {{tax}} · Discount {{discount}}",
+  "transactions.breakdown":
+    "Subtotal {{subtotal}} · Tax {{tax}} · Discount {{discount}}",
   "transactions.status.paid": "Paid",
   "transactions.status.pending": "Pending",
   "transactions.status.failed": "Failed",
@@ -596,12 +642,23 @@ const vi: Dictionary = {
   "checkout.activationUnderTwo": "Kích hoạt trong chưa tới 2 phút",
   "checkout.noPhysicalSim": "Không cần SIM vật lý",
   "checkout.keepNumber": "Giữ số hiện tại",
-  "checkout.completePurchase": "Hoàn tất mua hàng",
+  "checkout.completePurchase": "Thanh toán",
   "checkout.completing": "Đang hoàn tất...",
   "checkout.paySepay": "Tạo chuyển khoản SePay",
   "checkout.unableStartStripe": "Không thể bắt đầu thanh toán Stripe.",
   "checkout.paymentPending": "Thanh toán đang chờ xác nhận.",
-  "checkout.sepayPending": "Chuyển khoản với nội dung {{code}}. Trạng thái sẽ cập nhật sau khi SePay xác nhận.",
+  "checkout.paymentConfirmed": "Thanh toan da duoc xac nhan.",
+  "checkout.paymentFailed": "Thanh toan chua hoan tat.",
+  "checkout.sepayPending":
+    "Chuyển khoản với nội dung {{code}}. Trạng thái sẽ cập nhật sau khi SePay xác nhận.",
+  "checkout.sepayTransferTitle": "Thong tin chuyen khoan",
+  "checkout.sepayScanHint": "Mo ung dung ngan hang, quet ma QR, roi xac nhan chuyen khoan.",
+  "checkout.sepayAmount": "So tien",
+  "checkout.sepayBank": "Ngan hang",
+  "checkout.sepayAccountNumber": "So tai khoan",
+  "checkout.sepayAccountHolder": "Chu tai khoan",
+  "checkout.sepayContent": "Noi dung chuyen khoan",
+  "checkout.sepayWaiting": "Dang cho SePay xac nhan. Giu nguyen noi dung chuyen khoan.",
   "checkout.payVnpay": "Thanh toán bằng VNPay Sandbox",
   "checkout.unableLoadPackage": "Không thể tải gói này.",
   "checkout.emailRequired": "Cần email tài khoản để hoàn tất mua hàng.",
@@ -620,7 +677,8 @@ const vi: Dictionary = {
   "success.paymentSuccessful": "Thanh toán thành công",
   "success.paymentPending": "Thanh toán đang chờ",
   "success.ready": "eSIM của bạn đã sẵn sàng sử dụng.",
-  "success.fulfillmentPending": "Thanh toán đã xác nhận. eSIM sẽ xuất hiện sau khi fulfillment hoàn tất.",
+  "success.fulfillmentPending":
+    "Thanh toán đã xác nhận. eSIM sẽ xuất hiện sau khi fulfillment hoàn tất.",
   "success.orderId": "Mã đơn hàng: {{value}}",
   "success.purchaseDate": "Ngày mua: {{value}}",
   "success.esimStatus": "Trạng thái eSIM",
@@ -690,10 +748,11 @@ const vi: Dictionary = {
   "myEsims.planActive": "{{count}} gói đang hoạt động",
   "myEsims.plansActive": "{{count}} gói đang hoạt động",
   "myEsims.noEsims": "Chưa có eSIM",
-  "myEsims.noEsimsBody": "Mua eSIM đầu tiên để luôn kết nối trên toàn thế giới.",
+  "myEsims.noEsimsBody":
+    "Mua eSIM đầu tiên để luôn kết nối trên toàn thế giới.",
   "myEsims.dataRemaining": "Dung lượng còn lại",
   "myEsims.daysLeft": "còn {{count}} ngày",
-  "myEsims.noResults": "Không tìm thấy eSIM cho \"{{query}}\"",
+  "myEsims.noResults": 'Không tìm thấy eSIM cho "{{query}}"',
   "esim.activationCode": "Mã kích hoạt",
   "esim.activationDetails": "Chi tiết kích hoạt",
   "esim.activationDetailsSub": "ICCID, mã kích hoạt và địa chỉ",
@@ -803,86 +862,119 @@ const vi: Dictionary = {
   "profile.detail.personalInformation.title": "Thông tin cá nhân",
   "profile.detail.personalInformation.body":
     "Thông tin hồ sơ giúp AirConnect chuẩn bị thanh toán, biên nhận và hỗ trợ eSIM nhanh hơn.",
-  "profile.detail.personalInformation.row1": "Tên và email lấy từ tài khoản đã đăng nhập.",
-  "profile.detail.personalInformation.row2": "Số điện thoại là tùy chọn và có thể dùng khi hỗ trợ cần liên hệ lại.",
-  "profile.detail.personalInformation.row3": "Dữ liệu hồ sơ được gắn với tài khoản AirConnect của bạn.",
+  "profile.detail.personalInformation.row1":
+    "Tên và email lấy từ tài khoản đã đăng nhập.",
+  "profile.detail.personalInformation.row2":
+    "Số điện thoại là tùy chọn và có thể dùng khi hỗ trợ cần liên hệ lại.",
+  "profile.detail.personalInformation.row3":
+    "Dữ liệu hồ sơ được gắn với tài khoản AirConnect của bạn.",
   "profile.detail.paymentMethods.title": "Phương thức thanh toán",
   "profile.detail.paymentMethods.body":
     "Quản lý các lựa chọn thanh toán có thể dùng khi mua gói.",
-  "profile.detail.paymentMethods.row1": "VNPay đang khả dụng cho giao dịch thử nghiệm.",
-  "profile.detail.paymentMethods.row2": "Thẻ và ví điện tử đang là lựa chọn sắp hỗ trợ.",
-  "profile.detail.paymentMethods.row3": "Chi tiết thanh toán do nhà cung cấp thanh toán xử lý.",
+  "profile.detail.paymentMethods.row1":
+    "VNPay đang khả dụng cho giao dịch thử nghiệm.",
+  "profile.detail.paymentMethods.row2":
+    "Thẻ và ví điện tử đang là lựa chọn sắp hỗ trợ.",
+  "profile.detail.paymentMethods.row3":
+    "Chi tiết thanh toán do nhà cung cấp thanh toán xử lý.",
   "profile.detail.changePassword.title": "Đổi mật khẩu",
   "profile.detail.changePassword.body":
     "AirConnect hiện dùng đăng nhập qua nhà cung cấp, nên việc đổi mật khẩu được quản lý trong tài khoản đăng nhập của bạn.",
-  "profile.detail.changePassword.row1": "Dùng trang bảo mật tài khoản đăng nhập để đổi mật khẩu.",
-  "profile.detail.changePassword.row2": "Đăng xuất khỏi thiết bị lạ sau khi đổi mật khẩu.",
-  "profile.detail.changePassword.row3": "Quay lại AirConnect và đăng nhập lại nếu cần.",
+  "profile.detail.changePassword.row1":
+    "Dùng trang bảo mật tài khoản đăng nhập để đổi mật khẩu.",
+  "profile.detail.changePassword.row2":
+    "Đăng xuất khỏi thiết bị lạ sau khi đổi mật khẩu.",
+  "profile.detail.changePassword.row3":
+    "Quay lại AirConnect và đăng nhập lại nếu cần.",
   "profile.detail.manageDevices.title": "Quản lý thiết bị",
   "profile.detail.manageDevices.body":
     "Xem nơi tài khoản AirConnect đang hoạt động và kiểm soát quyền truy cập.",
-  "profile.detail.manageDevices.row1": "Thiết bị hiện tại giữ phiên đăng nhập đang dùng.",
-  "profile.detail.manageDevices.row2": "Đăng xuất để kết thúc phiên trên thiết bị này.",
-  "profile.detail.manageDevices.row3": "Dùng bảo mật tài khoản đăng nhập để gỡ phiên lạ.",
+  "profile.detail.manageDevices.row1":
+    "Thiết bị hiện tại giữ phiên đăng nhập đang dùng.",
+  "profile.detail.manageDevices.row2":
+    "Đăng xuất để kết thúc phiên trên thiết bị này.",
+  "profile.detail.manageDevices.row3":
+    "Dùng bảo mật tài khoản đăng nhập để gỡ phiên lạ.",
   "profile.detail.privacySettings.title": "Cài đặt quyền riêng tư",
   "profile.detail.privacySettings.body":
     "Kiểm soát dữ liệu tài khoản mà AirConnect dùng để xử lý mua eSIM và hỗ trợ.",
-  "profile.detail.privacySettings.row1": "Đơn hàng và eSIM được dùng để cung cấp dịch vụ.",
-  "profile.detail.privacySettings.row2": "Tùy chọn thông báo có thể thay đổi bất cứ lúc nào.",
-  "profile.detail.privacySettings.row3": "Hỗ trợ có thể dùng chi tiết đơn hàng để xử lý sự cố.",
+  "profile.detail.privacySettings.row1":
+    "Đơn hàng và eSIM được dùng để cung cấp dịch vụ.",
+  "profile.detail.privacySettings.row2":
+    "Tùy chọn thông báo có thể thay đổi bất cứ lúc nào.",
+  "profile.detail.privacySettings.row3":
+    "Hỗ trợ có thể dùng chi tiết đơn hàng để xử lý sự cố.",
   "profile.detail.helpCenter.title": "Trung tâm trợ giúp",
   "profile.detail.helpCenter.body":
     "Xem hướng dẫn nhanh về mua, cài đặt và quản lý eSIM.",
-  "profile.detail.helpCenter.row1": "Kiểm tra thiết bị có hỗ trợ eSIM trước khi mua.",
+  "profile.detail.helpCenter.row1":
+    "Kiểm tra thiết bị có hỗ trợ eSIM trước khi mua.",
   "profile.detail.helpCenter.row2": "Cài đặt bằng mã QR sau khi thanh toán.",
-  "profile.detail.helpCenter.row3": "Giữ SIM chính hoạt động cho cuộc gọi và tin nhắn.",
+  "profile.detail.helpCenter.row3":
+    "Giữ SIM chính hoạt động cho cuộc gọi và tin nhắn.",
   "profile.detail.contactSupport.title": "Liên hệ hỗ trợ",
   "profile.detail.contactSupport.body":
     "Liên hệ AirConnect khi cần hỗ trợ thanh toán, cài đặt hoặc kết nối.",
   "profile.detail.contactSupport.row1": "Số điện thoại: 0965394575",
   "profile.detail.contactSupport.row2": "Thư điện tử: dokhoahaiphong@gmail.com",
-  "profile.detail.contactSupport.row3": "Gửi kèm mã đơn hàng khi hỏi về giao dịch.",
+  "profile.detail.contactSupport.row3":
+    "Gửi kèm mã đơn hàng khi hỏi về giao dịch.",
   "profile.detail.faq.title": "Câu hỏi thường gặp",
   "profile.detail.faq.body":
     "Câu trả lời nhanh khi mua và dùng gói eSIM AirConnect.",
-  "profile.detail.faq.row1": "Tôi nhận eSIM ở đâu? Sau thanh toán, mã QR và chi tiết kích hoạt nằm trong eSIM của tôi.",
-  "profile.detail.faq.row2": "Khi nào gói bắt đầu? Gói bắt đầu khi eSIM kết nối mạng tại điểm đến.",
-  "profile.detail.faq.row3": "Tôi có cần tháo SIM chính không? Không, hãy giữ SIM chính để nghe gọi và nhận tin nhắn.",
+  "profile.detail.faq.row1":
+    "Tôi nhận eSIM ở đâu? Sau thanh toán, mã QR và chi tiết kích hoạt nằm trong eSIM của tôi.",
+  "profile.detail.faq.row2":
+    "Khi nào gói bắt đầu? Gói bắt đầu khi eSIM kết nối mạng tại điểm đến.",
+  "profile.detail.faq.row3":
+    "Tôi có cần tháo SIM chính không? Không, hãy giữ SIM chính để nghe gọi và nhận tin nhắn.",
   "profile.detail.termsPrivacy.title": "Điều khoản & quyền riêng tư",
   "profile.detail.termsPrivacy.body":
     "AirConnect dùng dữ liệu tài khoản và đơn hàng để xử lý mua hàng, giao eSIM và hỗ trợ.",
-  "profile.detail.termsPrivacy.row1": "Xử lý thanh toán tuân theo yêu cầu của nhà cung cấp.",
+  "profile.detail.termsPrivacy.row1":
+    "Xử lý thanh toán tuân theo yêu cầu của nhà cung cấp.",
   "profile.detail.termsPrivacy.row2": "eSIM đã mua luôn có trong eSIM của tôi.",
-  "profile.detail.termsPrivacy.row3": "Liên hệ hỗ trợ nếu có câu hỏi về tài khoản hoặc đơn hàng.",
+  "profile.detail.termsPrivacy.row3":
+    "Liên hệ hỗ trợ nếu có câu hỏi về tài khoản hoặc đơn hàng.",
   "profile.quick.orders.title": "Lịch sử giao dịch",
   "profile.quick.orders.body":
     "Xem các giao dịch AirConnect và dùng chi tiết đơn hàng khi cần hỗ trợ.",
-  "profile.quick.orders.row1": "eSIM đã thanh toán sẽ xuất hiện trong eSIM của tôi sau khi mua.",
-  "profile.quick.orders.row2": "Giữ mã đơn hàng để được hỗ trợ thanh toán và kích hoạt.",
-  "profile.quick.orders.row3": "Giao dịch thử nghiệm VNPay được xác minh trước khi tạo eSIM.",
+  "profile.quick.orders.row1":
+    "eSIM đã thanh toán sẽ xuất hiện trong eSIM của tôi sau khi mua.",
+  "profile.quick.orders.row2":
+    "Giữ mã đơn hàng để được hỗ trợ thanh toán và kích hoạt.",
+  "profile.quick.orders.row3":
+    "Giao dịch thử nghiệm VNPay được xác minh trước khi tạo eSIM.",
   "profile.quick.saved.title": "Điểm đến đã lưu",
   "profile.quick.saved.body":
     "Theo dõi các điểm đến bạn muốn mua dung lượng eSIM sau.",
   "profile.quick.saved.row1": "Lưu quốc gia hoặc khu vực bạn thường đến.",
-  "profile.quick.saved.row2": "So sánh dung lượng, thời hạn, mạng và giá trước khi mua.",
-  "profile.quick.saved.row3": "Quay lại Khám phá bất cứ lúc nào để chọn điểm đến.",
+  "profile.quick.saved.row2":
+    "So sánh dung lượng, thời hạn, mạng và giá trước khi mua.",
+  "profile.quick.saved.row3":
+    "Quay lại Khám phá bất cứ lúc nào để chọn điểm đến.",
   "profile.quick.support.title": "Hỗ trợ",
   "profile.quick.support.body":
     "Liên hệ AirConnect khi cần hỗ trợ thanh toán, cài đặt hoặc kết nối.",
   "profile.quick.support.row1": "Số điện thoại: 0965394575",
   "profile.quick.support.row2": "Thư điện tử: dokhoahaiphong@gmail.com",
-  "profile.quick.support.row3": "Gửi kèm mã đơn hàng và ảnh chụp màn hình nếu có lỗi.",
+  "profile.quick.support.row3":
+    "Gửi kèm mã đơn hàng và ảnh chụp màn hình nếu có lỗi.",
   "transactions.title": "Lịch sử giao dịch",
-  "transactions.subtitle": "Theo dõi trạng thái thanh toán, gói đã mua và chi tiết đơn hàng.",
+  "transactions.subtitle":
+    "Theo dõi trạng thái thanh toán, gói đã mua và chi tiết đơn hàng.",
   "transactions.loading": "Đang tải giao dịch...",
   "transactions.signInTitle": "Đăng nhập để xem giao dịch",
-  "transactions.signInBody": "Dùng tài khoản AirConnect để xem các giao dịch eSIM đã mua.",
+  "transactions.signInBody":
+    "Dùng tài khoản AirConnect để xem các giao dịch eSIM đã mua.",
   "transactions.emptyTitle": "Không có giao dịch",
-  "transactions.emptyBody": "Giao dịch mua thành công sẽ xuất hiện ở đây sau khi thanh toán.",
+  "transactions.emptyBody":
+    "Giao dịch mua thành công sẽ xuất hiện ở đây sau khi thanh toán.",
   "transactions.orderId": "Mã đơn hàng",
   "transactions.paymentMethod": "Phương thức thanh toán",
   "transactions.email": "Thư điện tử",
-  "transactions.breakdown": "Tạm tính {{subtotal}} · Thuế {{tax}} · Giảm giá {{discount}}",
+  "transactions.breakdown":
+    "Tạm tính {{subtotal}} · Thuế {{tax}} · Giảm giá {{discount}}",
   "transactions.status.paid": "Đã thanh toán",
   "transactions.status.pending": "Đang chờ",
   "transactions.status.failed": "Thất bại",

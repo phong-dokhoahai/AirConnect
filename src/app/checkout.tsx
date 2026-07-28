@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
+import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
   ArrowLeft,
@@ -14,15 +14,16 @@ import {
   Users,
   Zap,
 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { useEffect, useState } from "react";
 
 import { Flag, Toast } from "@/components/airconnect/ui";
 import { getProfileUser } from "@/features/profile/utils";
@@ -30,15 +31,18 @@ import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
 import { useI18n } from "@/lib/i18n";
 import {
+  createSepayPendingPayment,
+  createStripeCheckoutPayment,
+  getPaymentErrorMessage,
+  getPaymentOrderStatus,
+  type SepayPaymentResponse,
+} from "@/lib/payments";
+import {
   formatMoney,
   getPlanDisplay,
   type PlanDisplayRow,
   toNumber,
 } from "@/lib/planDisplay";
-import {
-  createSepayPendingPayment,
-  createStripeCheckoutPayment,
-} from "@/lib/payments";
 
 const paymentMethods = [
   { id: "sepay", labelKey: "payment.sepay", icon: QrCode },
@@ -58,6 +62,35 @@ const benefits = [
   { icon: CreditCard, labelKey: "checkout.noPhysicalSim" },
   { icon: Phone, labelKey: "checkout.keepNumber" },
 ];
+
+const fallbackSepayBank = {
+  bankCode: "TCB",
+  accountNumber: "19070208496017",
+  accountHolder: "DO KHOA HAI PHONG",
+};
+
+function formatBankAccount(value?: string) {
+  return (value || fallbackSepayBank.accountNumber)
+    .replace(/\s/g, "")
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function getSepayQrUrl(transfer: SepayPaymentResponse) {
+  if (transfer.qrUrl) return transfer.qrUrl;
+
+  const params = new URLSearchParams({
+    acc: transfer.accountNumber || fallbackSepayBank.accountNumber,
+    bank: transfer.bankCode || fallbackSepayBank.bankCode,
+    amount: String(Math.round(transfer.amount)),
+    des: transfer.paymentCode,
+    template: "compact",
+    showinfo: "true",
+    holder: transfer.accountHolder || fallbackSepayBank.accountHolder,
+  });
+
+  return `https://vietqr.app/img?${params.toString()}`;
+}
 
 export default function CheckoutRoute() {
   const { t, translateName } = useI18n();
@@ -81,6 +114,8 @@ export default function CheckoutRoute() {
     message: string;
     variant: "success" | "error";
   } | null>(null);
+  const [sepayTransfer, setSepayTransfer] =
+    useState<SepayPaymentResponse | null>(null);
   const profileUser = authUser ? getProfileUser(authUser) : null;
   const profileEmail = authUser?.email ?? "";
 
@@ -116,6 +151,48 @@ export default function CheckoutRoute() {
     };
   }, [planId, t]);
 
+  useEffect(() => {
+    if (!sepayTransfer || selectedPayment !== "sepay") return;
+
+    const transfer = sepayTransfer;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let isCanceled = false;
+
+    async function pollStatus() {
+      const { data, error } = await getPaymentOrderStatus(transfer.orderId);
+      if (isCanceled) return;
+
+      if (error) {
+        console.error("SePay status polling failed", error);
+      } else if (data?.status === "paid") {
+        setPurchaseNotice({
+          message: t("checkout.paymentConfirmed"),
+          variant: "success",
+        });
+        router.replace({
+          pathname: "/success",
+          params: { orderId: transfer.orderId },
+        });
+        return;
+      } else if (data?.status === "failed" || data?.status === "canceled") {
+        const message = t("checkout.paymentFailed");
+        setPurchaseError(message);
+        setPurchaseNotice({ message, variant: "error" });
+        setSepayTransfer(null);
+        return;
+      }
+
+      timeoutId = setTimeout(pollStatus, 3000);
+    }
+
+    void pollStatus();
+
+    return () => {
+      isCanceled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [selectedPayment, sepayTransfer, t]);
+
   const planPrice = toNumber(plan?.price);
   const discount = appliedPromo ? 2.0 : 0;
   const taxes = 0.5;
@@ -137,7 +214,10 @@ export default function CheckoutRoute() {
       });
     } else {
       setPurchaseError(t("checkout.invalidPromo"));
-      setPurchaseNotice({ message: t("checkout.invalidPromo"), variant: "error" });
+      setPurchaseNotice({
+        message: t("checkout.invalidPromo"),
+        variant: "error",
+      });
     }
   };
 
@@ -156,6 +236,7 @@ export default function CheckoutRoute() {
     setPurchasePending(true);
     setPurchaseError(null);
     setPurchaseNotice(null);
+    setSepayTransfer(null);
 
     try {
       const paymentInput = {
@@ -182,7 +263,10 @@ export default function CheckoutRoute() {
         });
 
         if (payment.error || !payment.data?.checkoutUrl) {
-          const message = payment.error?.message ?? t("checkout.unableStartStripe");
+          const message = await getPaymentErrorMessage(
+            payment.error,
+            t("checkout.unableStartStripe"),
+          );
           setPurchaseError(message);
           setPurchaseNotice({ message, variant: "error" });
           return;
@@ -200,7 +284,10 @@ export default function CheckoutRoute() {
 
       if (error || !data) {
         console.error("Purchase creation failed", error);
-        const message = error?.message ?? t("common.somethingWrong");
+        const message = await getPaymentErrorMessage(
+          error,
+          t("common.somethingWrong"),
+        );
         setPurchaseError(message);
         setPurchaseNotice({ message, variant: "error" });
         return;
@@ -210,6 +297,7 @@ export default function CheckoutRoute() {
         message: t("checkout.sepayPending", { code: data.paymentCode }),
         variant: "success",
       });
+      setSepayTransfer(data);
     } catch (error) {
       console.error("Purchase creation failed", error);
       const message = getErrorMessage(error);
@@ -264,7 +352,9 @@ export default function CheckoutRoute() {
           }`}
         >
           <Text className="font-medium text-white">
-            {signingIn ? t("common.openingGoogle") : t("common.continueWithGoogle")}
+            {signingIn
+              ? t("common.openingGoogle")
+              : t("common.continueWithGoogle")}
           </Text>
         </Pressable>
       </View>
@@ -275,7 +365,8 @@ export default function CheckoutRoute() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50 px-6">
         <Text className="text-center text-lg font-semibold text-gray-900">
-          {loadError ?? (planId ? t("common.packageUnavailable") : t("common.missingPlan"))}
+          {loadError ??
+            (planId ? t("common.packageUnavailable") : t("common.missingPlan"))}
         </Text>
         <Pressable
           onPress={() => router.back()}
@@ -283,6 +374,94 @@ export default function CheckoutRoute() {
         >
           <Text className="font-medium text-white">{t("common.back")}</Text>
         </Pressable>
+      </View>
+    );
+  }
+
+  if (sepayTransfer) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <Toast
+          message={purchaseNotice?.message}
+          variant={purchaseNotice?.variant}
+        />
+        <View className="bg-white px-6 pt-6">
+          <View className="flex-row items-center gap-4">
+            <Pressable
+              onPress={() => setSepayTransfer(null)}
+              className="rounded-full p-2"
+            >
+              <ArrowLeft size={24} color="#111827" />
+            </Pressable>
+
+            <Text className="text-2xl font-semibold text-gray-900">
+              {t("checkout.sepayTransferTitle")}
+            </Text>
+          </View>
+        </View>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-6 pb-10 pt-6"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="rounded-2xl border border-gray-100 bg-white p-5">
+            <View className="items-center">
+              <View className="rounded-2xl border border-gray-100 bg-white p-3">
+                <Image
+                  source={{ uri: getSepayQrUrl(sepayTransfer) }}
+                  resizeMode="contain"
+                  style={{ width: 240, height: 240 }}
+                />
+              </View>
+
+              <Text className="mt-3 text-center text-sm text-gray-600">
+                {t("checkout.sepayScanHint")}
+              </Text>
+            </View>
+
+            {[
+              [
+                t("checkout.sepayAmount"),
+                formatMoney(sepayTransfer.amount, sepayTransfer.currency),
+              ],
+              [
+                t("checkout.sepayBank"),
+                sepayTransfer.bankName ||
+                  sepayTransfer.bankCode ||
+                  fallbackSepayBank.bankCode,
+              ],
+              [
+                t("checkout.sepayAccountNumber"),
+                formatBankAccount(sepayTransfer.accountNumber),
+              ],
+              [
+                t("checkout.sepayAccountHolder"),
+                sepayTransfer.accountHolder || fallbackSepayBank.accountHolder,
+              ],
+              [t("checkout.sepayContent"), sepayTransfer.paymentCode],
+            ].map(([label, value]) => (
+              <View
+                key={label}
+                className="mt-3 flex-row items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3"
+              >
+                <Text className="text-sm text-gray-500">{label}</Text>
+                <Text
+                  selectable
+                  className="flex-1 text-right text-sm font-semibold text-gray-900"
+                >
+                  {value}
+                </Text>
+              </View>
+            ))}
+
+            <View className="mt-4 rounded-xl bg-amber-50 px-4 py-3">
+              <Text className="text-center text-sm font-medium text-amber-800">
+                {t("checkout.sepayWaiting")}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -338,7 +517,9 @@ export default function CheckoutRoute() {
             </View>
 
             <View className="flex-row items-end justify-between border-t border-white/20 pt-3">
-              <Text className="text-sm text-white/90">{t("checkout.planPrice")}</Text>
+              <Text className="text-sm text-white/90">
+                {t("checkout.planPrice")}
+              </Text>
               <Text className="text-2xl font-bold text-white">
                 {formatMoney(planPrice, plan.currency)}
               </Text>
@@ -522,7 +703,9 @@ export default function CheckoutRoute() {
                   <Icon size={18} color="#7B61FF" />
                 </View>
 
-                <Text className="flex-1 text-sm text-gray-700">{t(labelKey)}</Text>
+                <Text className="flex-1 text-sm text-gray-700">
+                  {t(labelKey)}
+                </Text>
               </View>
             ))}
           </View>
@@ -552,9 +735,7 @@ export default function CheckoutRoute() {
           <Text className="text-center font-medium text-white">
             {purchasePending
               ? t("checkout.completing")
-              : selectedPayment === "sepay"
-                ? t("checkout.paySepay")
-                : t("checkout.completePurchase")}
+              : t("checkout.completePurchase")}
           </Text>
         </Pressable>
       </View>
