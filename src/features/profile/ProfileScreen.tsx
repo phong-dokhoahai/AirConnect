@@ -11,6 +11,7 @@ import { SettingsSections } from "./components/SettingsSections";
 import { QuickActionsGrid, StatsRow } from "./components/SummaryCards";
 import { quickActions, stats } from "./constants";
 import { useProfilePreferences } from "./hooks/useProfilePreferences";
+import { useProfileStats } from "./hooks/useProfileStats";
 import { getProfileUser } from "./utils";
 
 export default function ProfileScreen() {
@@ -30,6 +31,16 @@ export default function ProfileScreen() {
     ? (profileUser.points / profileUser.nextTierPoints) * 100
     : 0;
   const preferences = useProfilePreferences(rewardsPercent);
+  const profileStats = useProfileStats(authUser?.id);
+  const accountStats = stats.map((stat) => ({
+    ...stat,
+    value:
+      stat.labelKey === "profile.countriesConnected"
+        ? profileStats.countriesConnected
+        : stat.labelKey === "profile.totalDataUsed"
+          ? profileStats.totalDataUsed
+          : profileStats.esimsPurchased,
+  }));
 
   if (initializing) {
     return <LoadingProfile />;
@@ -53,7 +64,7 @@ export default function ProfileScreen() {
       >
         <View className="px-5 pt-5">
           <ProfileHeaderCard profileUser={profileUser} />
-          <StatsRow stats={stats} />
+          <StatsRow stats={accountStats} />
           <QuickActionsGrid
             actions={quickActions}
             onActionPress={(screen) => router.push(screen as never)}

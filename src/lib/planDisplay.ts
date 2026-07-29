@@ -25,11 +25,28 @@ export function toNumber(value: number | string | null | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-export function formatMoney(value: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
+const usdToVnd = 25000;
+
+function getDisplayMoney(value: number, currency: string, language = "en") {
+  if (language === "vi" && currency.toUpperCase() === "USD") {
+    return { value: value * usdToVnd, currency: "VND", locale: "vi-VN" };
+  }
+
+  return {
+    value,
     currency,
-  }).format(value);
+    locale: language === "vi" ? "vi-VN" : "en-US",
+  };
+}
+
+export function formatMoney(value: number, currency = "USD", language = "en") {
+  const display = getDisplayMoney(value, currency, language);
+
+  return new Intl.NumberFormat(display.locale, {
+    style: "currency",
+    currency: display.currency,
+    maximumFractionDigits: display.currency === "VND" ? 0 : undefined,
+  }).format(display.value);
 }
 
 export function getPlanDisplay(plan: PlanDisplayRow) {

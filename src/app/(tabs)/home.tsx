@@ -68,7 +68,7 @@ export default function HomeRoute() {
     setIsCatalogLoading(true);
     setCatalogError(null);
 
-    const result = await getCatalogData();
+    const result = await getCatalogData(language);
 
     if (result.error) {
       setCatalog(emptyCatalog);
@@ -78,7 +78,7 @@ export default function HomeRoute() {
     }
 
     setIsCatalogLoading(false);
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,7 +87,7 @@ export default function HomeRoute() {
       setIsCatalogLoading(true);
       setCatalogError(null);
 
-      const result = await getCatalogData();
+      const result = await getCatalogData(language);
 
       if (!isMounted) {
         return;
@@ -108,7 +108,7 @@ export default function HomeRoute() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [language]);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">

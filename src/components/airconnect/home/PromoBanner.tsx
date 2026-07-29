@@ -1,5 +1,6 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useI18n } from "@/lib/i18n";
+import { router } from "expo-router";
 import { Globe } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
@@ -29,7 +30,12 @@ export function PromoBanner() {
               {t("home.instantCountries")}
             </Text>
 
-            <Pressable className="bg-white self-start px-5 py-3 rounded-xl">
+            <Pressable
+              className="bg-white self-start px-5 py-3 rounded-xl"
+              onPress={() => {
+                router.push("/(tabs)/explore");
+              }}
+            >
               <Text className="font-medium text-[#7B61FF]">
                 {t("common.browsePlans")}
               </Text>

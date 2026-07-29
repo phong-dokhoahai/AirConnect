@@ -2,12 +2,11 @@ import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
-  ChevronRight,
   Filter,
   Heart,
   Mic,
   Search,
-  X,
+  X
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -44,7 +43,7 @@ const emptyCatalog: CatalogState = {
 
 export default function ExploreRoute() {
   const router = useRouter();
-  const { t, translateName } = useI18n();
+  const { language, t, translateName } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearchesList, setRecentSearchesList] = useState(recentSearches);
@@ -72,7 +71,7 @@ export default function ExploreRoute() {
     setIsCatalogLoading(true);
     setCatalogError(null);
 
-    const result = await getCatalogData();
+    const result = await getCatalogData(language);
 
     if (result.error) {
       setCatalog(emptyCatalog);
@@ -82,7 +81,7 @@ export default function ExploreRoute() {
     }
 
     setIsCatalogLoading(false);
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,7 +90,7 @@ export default function ExploreRoute() {
       setIsCatalogLoading(true);
       setCatalogError(null);
 
-      const result = await getCatalogData();
+      const result = await getCatalogData(language);
 
       if (!isMounted) {
         return;
@@ -112,7 +111,7 @@ export default function ExploreRoute() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [language]);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">
@@ -203,12 +202,12 @@ export default function ExploreRoute() {
               {t("home.popularDestinations")}
             </Text>
 
-            <Pressable className="flex-row items-center">
+            {/* <Pressable className="flex-row items-center">
               <Text className="text-sm font-medium text-[#7B61FF] mr-1">
                 {t("common.seeAll")}
               </Text>
               <ChevronRight size={16} color="#7B61FF" />
-            </Pressable>
+            </Pressable> */}
           </View>
 
           <View className="flex-row flex-wrap justify-between gap-y-3">
@@ -238,12 +237,12 @@ export default function ExploreRoute() {
               {t("home.regionalPlans")}
             </Text>
 
-            <Pressable className="flex-row items-center">
+            {/* <Pressable className="flex-row items-center">
               <Text className="text-sm font-medium text-[#7B61FF] mr-1">
                 {t("common.seeAll")}
               </Text>
               <ChevronRight size={16} color="#7B61FF" />
-            </Pressable>
+            </Pressable> */}
           </View>
 
           <ScrollView
@@ -345,11 +344,13 @@ export default function ExploreRoute() {
                         {plan.originalPrice}
                       </Text>
 
-                      <View className="bg-[#ECFDF5] px-2 py-1 rounded-full">
-                        <Text className="text-xs font-medium text-[#15803D]">
-                          {t("common.save", { value: plan.savings })}
-                        </Text>
-                      </View>
+                      {plan.savings ? (
+                        <View className="bg-[#ECFDF5] px-2 py-1 rounded-full">
+                          <Text className="text-xs font-medium text-[#15803D]">
+                            {t("common.save", { value: plan.savings })}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                 </TouchableOpacity>

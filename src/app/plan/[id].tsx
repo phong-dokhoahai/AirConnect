@@ -3,8 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
-  ChevronUp,
   Heart,
   Phone,
   QrCode,
@@ -26,6 +24,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { getPlanDetails } from "@/lib/catalogQueries";
 import { useI18n } from "@/lib/i18n";
+import { formatMoney } from "@/lib/planDisplay";
 
 type IconComponent = React.ComponentType<{
   size?: number;
@@ -46,9 +45,21 @@ const features: {
 ];
 
 const networks = [
-  { name: "NTT Docomo", coverageKey: "plan.nationwide", qualityKey: "plan.excellent" },
-  { name: "SoftBank", coverageKey: "plan.majorCities", qualityKey: "plan.great" },
-  { name: "KDDI", coverageKey: "plan.nationwide", qualityKey: "plan.excellent" },
+  {
+    name: "NTT Docomo",
+    coverageKey: "plan.nationwide",
+    qualityKey: "plan.excellent",
+  },
+  {
+    name: "SoftBank",
+    coverageKey: "plan.majorCities",
+    qualityKey: "plan.great",
+  },
+  {
+    name: "KDDI",
+    coverageKey: "plan.nationwide",
+    qualityKey: "plan.excellent",
+  },
 ];
 
 const faqs = [
@@ -128,19 +139,23 @@ type PlanDetails = {
   supports_5g: boolean;
   plan_countries?: { countries?: CountryRow | CountryRow[] | null }[] | null;
   plan_regions?: { regions?: RegionRow | RegionRow[] | null }[] | null;
-  plan_networks?: {
-    id?: string;
-    network_name: string;
-    coverage_note?: string | null;
-    network_type: string;
-    countries?: Pick<CountryRow, "id" | "name" | "iso2"> | null;
-  }[] | null;
-  plan_features?: {
-    id?: string;
-    icon: string;
-    label: string;
-    sort_order: number;
-  }[] | null;
+  plan_networks?:
+    | {
+        id?: string;
+        network_name: string;
+        coverage_note?: string | null;
+        network_type: string;
+        countries?: Pick<CountryRow, "id" | "name" | "iso2"> | null;
+      }[]
+    | null;
+  plan_features?:
+    | {
+        id?: string;
+        icon: string;
+        label: string;
+        sort_order: number;
+      }[]
+    | null;
 };
 
 function rows<T>(value: T | T[] | null | undefined): T[] {
@@ -153,11 +168,8 @@ function toNumber(value: number | string | null | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function formatPrice(value: number | string, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(toNumber(value));
+function formatPrice(value: number | string, currency: string, language: string) {
+  return formatMoney(toNumber(value), currency, language);
 }
 
 function formatData(plan: PlanDetails, unlimitedLabel: string) {
@@ -196,8 +208,13 @@ function getNetworkLabel(plan: PlanDetails) {
 
 export default function PlanDetailRoute() {
   const router = useRouter();
-  const { t, translateName } = useI18n();
-  const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
+  const { language, t, translateName } = useI18n();
+  const {
+    user: authUser,
+    initializing,
+    signingIn,
+    signInWithGoogle,
+  } = useAuth();
   const { id = "1" } = useLocalSearchParams<{ id?: string }>();
 
   const [plan, setPlan] = useState<PlanDetails | null>(null);
@@ -246,16 +263,20 @@ export default function PlanDetailRoute() {
     plan?.plan_countries?.flatMap((entry) => rows(entry.countries)) ?? [];
   const [region] =
     plan?.plan_regions?.flatMap((entry) => rows(entry.regions)) ?? [];
-  const destinationName = translateName(country?.name ?? region?.name ?? plan?.title ?? "Plan");
+  const destinationName = translateName(
+    country?.name ?? region?.name ?? plan?.title ?? "Plan",
+  );
   const destinationFlag = country ? flagFromIso2(country.iso2) : "\uD83C\uDF0D";
   const dataLabel = plan ? formatData(plan, t("common.unlimited")) : "-";
-  const validityLabel = plan ? formatValidity(plan.validity_days, t("common.days")) : "-";
+  const validityLabel = plan
+    ? formatValidity(plan.validity_days, t("common.days"))
+    : "-";
   const networkLabel = plan ? getNetworkLabel(plan) : "-";
-  const priceLabel = plan ? formatPrice(plan.price, plan.currency) : "-";
+  const priceLabel = plan ? formatPrice(plan.price, plan.currency, language) : "-";
   const originalPrice = plan ? toNumber(plan.original_price) : 0;
   const originalPriceLabel =
     plan && originalPrice > toNumber(plan.price)
-      ? formatPrice(originalPrice, plan.currency)
+      ? formatPrice(originalPrice, plan.currency, language)
       : null;
   const savingsLabel =
     plan && (plan.discount_percent ?? 0) > 0
@@ -266,12 +287,17 @@ export default function PlanDetailRoute() {
       ? formatPrice(
           toNumber(plan.price) / toNumber(plan.data_amount_gb),
           plan.currency,
+          language,
         )
       : "-";
   const networkRows = plan?.plan_networks?.length
     ? plan.plan_networks.map((network) => ({
         name: network.network_name,
-        coverage: translateName(network.coverage_note ?? network.countries?.name ?? t("common.coverage")),
+        coverage: translateName(
+          network.coverage_note ??
+            network.countries?.name ??
+            t("common.coverage"),
+        ),
         quality: network.network_type,
       }))
     : networks.map((network) => ({
@@ -287,7 +313,7 @@ export default function PlanDetailRoute() {
   const detailRows = [
     [t("common.data"), dataLabel],
     [t("common.validity"), validityLabel],
-    [t("plan.activationPolicy"), plan?.activation_policy ?? "-"],
+    // [t("plan.activationPolicy"), plan?.activation_policy ?? "-"],
     [t("common.speed"), networkLabel],
   ];
 
@@ -326,6 +352,8 @@ export default function PlanDetailRoute() {
             right: 0,
             top: 0,
             bottom: 0,
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
           }}
         />
 
@@ -366,7 +394,7 @@ export default function PlanDetailRoute() {
       >
         {isLoading ? (
           <View className="px-6 pt-28">
-            <View className="items-center rounded-2xl border border-[#F3F4F6] bg-white p-5">
+            <View className="items-center rounded--2xl border border-[#F3F4F6] bg-white p-5">
               <ActivityIndicator color="#7B61FF" />
               <Text className="mt-3 text-sm font-medium text-[#4B5563]">
                 {t("common.loadingPlan")}
@@ -387,296 +415,317 @@ export default function PlanDetailRoute() {
 
         {plan ? (
           <>
-        <CustomLinearGradient
-          colors={["#5B8DEF", "#7B61FF"]}
-          style={{
-            height: 256,
-            overflow: "hidden",
-          }}
-        >
-          <View className="absolute inset-0 opacity-20">
-            <Text
+            <CustomLinearGradient
+              colors={["#5B8DEF", "#7B61FF"]}
               style={{
-                position: "absolute",
-                top: 40,
-                right: 40,
-                fontSize: 88,
+                height: 256,
+                overflow: "hidden",
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
               }}
             >
-              🏯
-            </Text>
-
-            <Text
-              style={{
-                position: "absolute",
-                bottom: 40,
-                left: 40,
-                fontSize: 64,
-              }}
-            >
-              🗾
-            </Text>
-          </View>
-
-          <View className="absolute bottom-6 left-6 right-6">
-            <Text style={{ fontSize: 72, marginBottom: 12 }}>
-              {destinationFlag}
-            </Text>
-            <Text className="text-3xl font-bold text-white">
-              {destinationName}
-            </Text>
-          </View>
-        </CustomLinearGradient>
-
-        <View className="px-6 -mt-8 z-10">
-          <View className="bg-white rounded-3xl p-6 border border-[#F3F4F6]">
-            {savingsLabel ? (
-              <View className="absolute top-4 right-4 px-3 py-1.5 bg-[#ECFDF5] rounded-full">
-                <Text className="text-[#15803D] text-xs font-semibold">
-                  {savingsLabel}
-                </Text>
-              </View>
-            ) : null}
-
-            <View className="flex-row mb-6">
-              <View className="flex-1 items-center">
-                <Text className="text-2xl font-bold text-[#111827] mb-1">
-                  {dataLabel}
-                </Text>
-
-                <Text className="text-xs text-[#4B5563]">{t("common.data")}</Text>
-              </View>
-
-              <View className="flex-1 items-center border-x border-[#E5E7EB]">
-                <Text className="text-2xl font-bold text-[#111827] mb-1">
-                  {validityLabel}
-                </Text>
-
-                <Text className="text-xs text-[#4B5563]">{t("common.validity")}</Text>
-              </View>
-
-              <View className="flex-1 items-center">
-                <Text className="text-2xl font-bold text-[#7B61FF] mb-1">
-                  {networkLabel}
-                </Text>
-
-                <Text className="text-xs text-[#4B5563]">{t("common.network")}</Text>
-              </View>
-            </View>
-
-            <View className="pt-4 border-t border-[#F3F4F6] flex-row items-center justify-between">
-              <View>
-                <Text className="text-sm text-[#4B5563] mb-1">{t("common.totalPrice")}</Text>
-
-                <View className="flex-row items-baseline">
-                  <Text className="text-3xl font-bold text-[#111827] mr-2">
-                    {priceLabel}
-                  </Text>
-
-                  {originalPriceLabel ? (
-                    <Text className="text-lg text-[#9CA3AF] line-through">
-                      {originalPriceLabel}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-
-              <View className="items-end">
-                <Text className="text-xs text-[#4B5563] mb-1">{t("plan.perGb")}</Text>
-
-                <Text className="text-lg font-semibold text-[#7B61FF]">
-                  {perGbLabel}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View className="px-6 mt-6">
-          <Text className="text-xl font-semibold text-[#111827] mb-4">
-            {t("plan.whatsIncluded")}
-          </Text>
-
-          <View className="flex-row flex-wrap justify-between gap-y-3">
-            {includedFeatures.map((label, index) => {
-              const { icon: Icon, color } = features[index % features.length];
-
-              return (
-                <View
-                  key={label}
-                  style={{ width: "48%" }}
-                  className="bg-white rounded-2xl p-4 border border-[#F3F4F6]"
+              <View className="absolute inset-0 opacity-20">
+                <Text
+                  style={{
+                    position: "absolute",
+                    top: 40,
+                    right: 40,
+                    fontSize: 88,
+                  }}
                 >
-                  <View className="w-10 h-10 rounded-xl bg-[#F5F0FF] items-center justify-center mb-3">
-                    <Icon size={20} color={color} />
+                  🏯
+                </Text>
+
+                <Text
+                  style={{
+                    position: "absolute",
+                    bottom: 40,
+                    left: 40,
+                    fontSize: 64,
+                  }}
+                >
+                  🗾
+                </Text>
+              </View>
+
+              <View className="absolute bottom-8 left-6 right-6">
+                <Text style={{ fontSize: 72, marginBottom: 12 }}>
+                  {destinationFlag}
+                </Text>
+                <Text className="text-3xl font-bold text-white">
+                  {destinationName}
+                </Text>
+              </View>
+            </CustomLinearGradient>
+
+            <View className="px-6 -mt-8 z-10">
+              <View className="bg-white rounded-3xl p-6 border border-[#F3F4F6]">
+                {savingsLabel ? (
+                  <View className="absolute top-4 right-4 px-3 py-1.5 bg-[#ECFDF5] rounded-full">
+                    <Text className="text-[#15803D] text-xs font-semibold">
+                      {savingsLabel}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View className="flex-row mb-6">
+                  <View className="flex-1 items-center">
+                    <Text className="text-2xl font-bold text-[#111827] mb-1">
+                      {dataLabel}
+                    </Text>
+
+                    <Text className="text-xs text-[#4B5563]">
+                      {t("common.data")}
+                    </Text>
                   </View>
 
-                  <Text className="text-sm font-medium text-[#111827]">
-                    {label}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        <View className="px-6 mt-6">
-          <Text className="text-xl font-semibold text-[#111827] mb-4">
-            {t("plan.networkCoverage")}
-          </Text>
-
-          <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
-            {networkRows.map((network, index) => (
-              <View key={network.name}>
-                {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
-
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Text className="font-semibold text-[#111827] mb-1">
-                      {network.name}
+                  <View className="flex-1 items-center border-x border-[#E5E7EB]">
+                    <Text className="text-2xl font-bold text-[#111827] mb-1">
+                      {validityLabel}
                     </Text>
 
-                    <View className="flex-row items-center">
-                      <Text className="text-xs text-[#4B5563]">
-                        {network.coverage}
+                    <Text className="text-xs text-[#4B5563]">
+                      {t("common.validity")}
+                    </Text>
+                  </View>
+
+                  <View className="flex-1 items-center">
+                    <Text className="text-2xl font-bold text-[#7B61FF] mb-1">
+                      {networkLabel}
+                    </Text>
+
+                    <Text className="text-xs text-[#4B5563]">
+                      {t("common.network")}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="pt-4 border-t border-[#F3F4F6] flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-sm text-[#4B5563] mb-1">
+                      {t("common.totalPrice")}
+                    </Text>
+
+                    <View className="flex-row items-baseline">
+                      <Text className="text-3xl font-bold text-[#111827] mr-2">
+                        {priceLabel}
                       </Text>
 
-                      <Text className="text-xs text-[#9CA3AF] mx-2">•</Text>
-
-                      <Text className="text-xs text-[#16A34A] font-medium">
-                        {network.quality}
-                      </Text>
+                      {originalPriceLabel ? (
+                        <Text className="text-lg text-[#9CA3AF] line-through">
+                          {originalPriceLabel}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
 
-                  <Check size={20} color="#16A34A" />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
+                  <View className="items-end">
+                    <Text className="text-xs text-[#4B5563] mb-1">
+                      {t("plan.perGb")}
+                    </Text>
 
-        <View className="px-6 mt-6">
-          <Text className="text-xl font-semibold text-[#111827] mb-4">
-            {t("plan.planDetails")}
-          </Text>
-
-          <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
-            {detailRows.map(([label, value], index) => (
-              <View key={label}>
-                {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
-
-                <View className="flex-row justify-between">
-                  <Text className="text-[#4B5563]">{label}</Text>
-                  <Text className="font-semibold text-[#111827]">{value}</Text>
-                </View>
-              </View>
-            ))}
-
-            <View className="h-px bg-[#F3F4F6] my-4" />
-
-            <View className="flex-row justify-between">
-              <Text className="text-[#4B5563]">{t("plan.tetheringSupport")}</Text>
-
-              <View className="flex-row items-center">
-                <Check size={16} color="#16A34A" />
-                <Text className="font-semibold text-[#16A34A] ml-1">
-                  {plan.tethering_supported ? t("common.enabled") : t("common.disabled")}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View className="px-6 mt-6">
-          <Text className="text-xl font-semibold text-[#111827] mb-4">
-            {t("plan.faq")}
-          </Text>
-
-          <View className="bg-white rounded-2xl border border-[#F3F4F6] overflow-hidden">
-            {faqs.map((faq, index) => (
-              <View key={faq.questionKey}>
-                {index > 0 && <View className="h-px bg-[#F3F4F6]" />}
-
-                <Pressable
-                  onPress={() => toggleFaq(index)}
-                  className="px-5 py-4 flex-row items-center justify-between"
-                >
-                  <Text className="font-medium text-[#111827] flex-1 pr-4">
-                    {t(faq.questionKey)}
-                  </Text>
-
-                  {expandedFaq === index ? (
-                    <ChevronUp size={20} color="#9CA3AF" />
-                  ) : (
-                    <ChevronDown size={20} color="#9CA3AF" />
-                  )}
-                </Pressable>
-
-                {expandedFaq === index && (
-                  <View className="px-5 pb-4">
-                    <Text className="text-sm text-[#4B5563] leading-5">
-                      {t(faq.answerKey)}
+                    <Text className="text-lg font-semibold text-[#7B61FF]">
+                      {perGbLabel}
                     </Text>
                   </View>
-                )}
+                </View>
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
 
-        <View className="mt-6 mb-6">
-          <View className="px-6 mb-4">
-            <Text className="text-xl font-semibold text-[#111827]">
-              {t("plan.morePlansFor", { name: destinationName })}
-            </Text>
-          </View>
+            <View className="px-6 mt-6">
+              <Text className="text-xl font-semibold text-[#111827] mb-4">
+                {t("plan.whatsIncluded")}
+              </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24 }}
-          >
-            {relatedPlans.map((plan) => (
-              <Pressable
-                key={plan.id}
-                className="bg-white rounded-2xl p-4 border border-[#F3F4F6] mr-3"
-                style={{ width: 176 }}
-              >
-                <View className="absolute top-3 right-3 px-2 py-1 bg-[#ECFDF5] rounded-full">
-                  <Text className="text-[#15803D] text-xs font-semibold">
-                    -{plan.savings}
+              <View className="flex-row flex-wrap justify-between gap-y-3">
+                {includedFeatures.map((label, index) => {
+                  const { icon: Icon, color } =
+                    features[index % features.length];
+
+                  return (
+                    <View
+                      key={label}
+                      style={{ width: "48%" }}
+                      className="bg-white rounded-2xl p-4 border border-[#F3F4F6]"
+                    >
+                      <View className="w-10 h-10 rounded-xl bg-[#F5F0FF] items-center justify-center mb-3">
+                        <Icon size={20} color={color} />
+                      </View>
+
+                      <Text className="text-sm font-medium text-[#111827]">
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View className="px-6 mt-6">
+              <Text className="text-xl font-semibold text-[#111827] mb-4">
+                {t("plan.networkCoverage")}
+              </Text>
+
+              <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
+                {networkRows.map((network, index) => (
+                  <View key={network.name}>
+                    {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
+
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="font-semibold text-[#111827] mb-1">
+                          {network.name}
+                        </Text>
+
+                        <View className="flex-row items-center">
+                          <Text className="text-xs text-[#4B5563]">
+                            {network.coverage}
+                          </Text>
+
+                          <Text className="text-xs text-[#9CA3AF] mx-2">•</Text>
+
+                          <Text className="text-xs text-[#16A34A] font-medium">
+                            {network.quality}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Check size={20} color="#16A34A" />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className="px-6 mt-6">
+              <Text className="text-xl font-semibold text-[#111827] mb-4">
+                {t("plan.planDetails")}
+              </Text>
+
+              <View className="bg-white rounded-2xl p-5 border border-[#F3F4F6]">
+                {detailRows.map(([label, value], index) => (
+                  <View key={label}>
+                    {index > 0 && <View className="h-px bg-[#F3F4F6] my-4" />}
+
+                    <View className="flex-row justify-between">
+                      <Text className="text-[#4B5563]">{label}</Text>
+                      <Text className="font-semibold text-[#111827]">
+                        {value}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+
+                <View className="h-px bg-[#F3F4F6] my-4" />
+
+                <View className="flex-row justify-between">
+                  <Text className="text-[#4B5563]">
+                    {t("plan.tetheringSupport")}
                   </Text>
+
+                  <View className="flex-row items-center">
+                    <Check size={16} color="#16A34A" />
+                    <Text className="font-semibold text-[#16A34A] ml-1">
+                      {plan.tethering_supported
+                        ? t("common.enabled")
+                        : t("common.disabled")}
+                    </Text>
+                  </View>
                 </View>
+              </View>
+            </View>
 
-                <View className="mb-3">
-                  <Text className="text-2xl font-bold text-[#111827] mb-1">
-                    {plan.data.includes(".") ? t(plan.data) : plan.data}
-                  </Text>
+            {/* <View className="px-6 mt-6">
+              <Text className="text-xl font-semibold text-[#111827] mb-4">
+                {t("plan.faq")}
+              </Text>
 
-                  <Text className="text-xs text-[#4B5563]">
-                    {plan.validity.includes("common.")
-                      ? plan.validity
-                          .split(" ")
-                          .map((part) => (part.includes(".") ? t(part) : part))
-                          .join(" ")
-                      : plan.validity}
-                  </Text>
-                </View>
+              <View className="bg-white rounded-2xl border border-[#F3F4F6] overflow-hidden">
+                {faqs.map((faq, index) => (
+                  <View key={faq.questionKey}>
+                    {index > 0 && <View className="h-px bg-[#F3F4F6]" />}
 
-                <View className="mb-3">
-                  <Text className="text-xs text-[#7B61FF] font-medium">
-                    {plan.network}
-                  </Text>
-                </View>
+                    <Pressable
+                      onPress={() => toggleFaq(index)}
+                      className="px-5 py-4 flex-row items-center justify-between"
+                    >
+                      <Text className="font-medium text-[#111827] flex-1 pr-4">
+                        {t(faq.questionKey)}
+                      </Text>
 
-                <Text className="text-xl font-bold text-[#111827]">
-                  {plan.price}
+                      {expandedFaq === index ? (
+                        <ChevronUp size={20} color="#9CA3AF" />
+                      ) : (
+                        <ChevronDown size={20} color="#9CA3AF" />
+                      )}
+                    </Pressable>
+
+                    {expandedFaq === index && (
+                      <View className="px-5 pb-4">
+                        <Text className="text-sm text-[#4B5563] leading-5">
+                          {t(faq.answerKey)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View> */}
+
+            {/* <View className="mt-6 mb-6">
+              <View className="px-6 mb-4">
+                <Text className="text-xl font-semibold text-[#111827]">
+                  {t("plan.morePlansFor", { name: destinationName })}
                 </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 24 }}
+              >
+                {relatedPlans.map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    className="bg-white rounded-2xl p-4 border border-[#F3F4F6] mr-3"
+                    style={{ width: 176 }}
+                  >
+                    <View className="absolute top-3 right-3 px-2 py-1 bg-[#ECFDF5] rounded-full">
+                      <Text className="text-[#15803D] text-xs font-semibold">
+                        -{plan.savings}
+                      </Text>
+                    </View>
+
+                    <View className="mb-3">
+                      <Text className="text-2xl font-bold text-[#111827] mb-1">
+                        {plan.data.includes(".") ? t(plan.data) : plan.data}
+                      </Text>
+
+                      <Text className="text-xs text-[#4B5563]">
+                        {plan.validity.includes("common.")
+                          ? plan.validity
+                              .split(" ")
+                              .map((part) =>
+                                part.includes(".") ? t(part) : part,
+                              )
+                              .join(" ")
+                          : plan.validity}
+                      </Text>
+                    </View>
+
+                    <View className="mb-3">
+                      <Text className="text-xs text-[#7B61FF] font-medium">
+                        {plan.network}
+                      </Text>
+                    </View>
+
+                    <Text className="text-xl font-bold text-[#111827]">
+                      {plan.price}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View> */}
           </>
         ) : null}
       </ScrollView>
@@ -684,7 +733,9 @@ export default function PlanDetailRoute() {
       <View className="border-t border-[#E5E7EB] bg-white px-6 py-4">
         <View className="flex-row items-center justify-between mb-4">
           <View>
-            <Text className="text-sm text-[#4B5563]">{t("common.totalPrice")}</Text>
+            <Text className="text-sm text-[#4B5563]">
+              {t("common.totalPrice")}
+            </Text>
             <Text className="text-2xl font-bold text-[#111827]">
               {priceLabel}
             </Text>

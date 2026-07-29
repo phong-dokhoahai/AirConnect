@@ -12,21 +12,21 @@ import type { QuickAction, StatItem } from "./types";
 export const stats: StatItem[] = [
   {
     labelKey: "profile.countriesConnected",
-    value: "12",
+    value: "0",
     icon: Globe,
     from: "#5B8DEF",
     to: "#6915E0",
   },
   {
     labelKey: "profile.totalDataUsed",
-    value: "148 GB",
+    value: "0 GB",
     icon: Wifi,
     from: "#6915E0",
     to: "#9864E1",
   },
   {
     labelKey: "profile.esimsPurchased",
-    value: "24",
+    value: "0",
     icon: Smartphone,
     from: "#9864E1",
     to: "#C084FC",

@@ -404,7 +404,7 @@ Complete Purchase
 Behavior:
 
 * Signed-in checkout can create a pending Stripe or SePay payment order with product metadata for future fulfillment.
-* SePay checkout renders VietQR bank transfer details from Edge Function configuration and waits for webhook confirmation.
+* SePay checkout opens a VietQR bank-app deeplink with amount/content after order creation, renders VietQR transfer details as fallback, and waits for webhook confirmation.
 * Stripe and SePay webhooks only update payment status on the order.
 * eSIM access is granted by a separate fulfillment service after payment confirmation; payment webhooks must not create or unlock purchased products.
 * Buyer name/email come from the signed-in Google account.
@@ -521,6 +521,7 @@ Language setting:
 * Users can switch the whole app between English and Vietnamese from Profile settings.
 * The selected language is saved locally on the device.
 * UI copy should use the app i18n layer; keep AirConnect as the app name.
+* Vietnamese display localizes catalog, plan detail, recommendation, and checkout price labels to VND; payment creation and order records keep the plan/payment currency.
 
 Settings details:
 
@@ -530,8 +531,9 @@ Settings details:
 Quick actions:
 
 * My eSIMs opens the purchased eSIM list.
-* Transaction History opens the signed-in user's Supabase order history.
-* Saved Destinations and Support open dedicated in-app information screens.
+* Transaction History opens the signed-in user's Supabase order history and shows an empty state when there are no orders.
+* Saved Destinations opens an in-app empty state with a path back to Explore.
+* Support opens an in-app contact screen with phone, email, and transaction history actions.
 
 ---
 

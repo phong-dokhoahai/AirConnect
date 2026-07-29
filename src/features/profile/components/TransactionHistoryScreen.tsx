@@ -32,6 +32,8 @@ type OrderRow = {
   user_esims?: { id: string; status: string; expires_at: string | null }[] | null;
 };
 
+const loadTimeoutMs = 3000;
+
 function firstRow<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -57,37 +59,58 @@ export function TransactionHistoryScreen() {
   const { language, t, translateName } = useI18n();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     if (!authUser) return;
+    const currentUserId = authUser.id;
 
     const timer = setTimeout(() => {
-      setIsLoading(true);
-      setError(null);
+      async function loadOrders() {
+        setIsLoading(true);
+        setHasLoadedOrders(false);
+        setError(null);
 
-      getUserOrders(authUser.id)
-        .then(({ data, error }) => {
+        try {
+          const result = await Promise.race([
+            getUserOrders(currentUserId),
+            new Promise<null>((resolve) =>
+              setTimeout(resolve, loadTimeoutMs, null),
+            ),
+          ]);
+
           if (!isMounted) return;
 
+          if (!result) {
+            setOrders([]);
+            return;
+          }
+
+          const { data, error } = result;
+
           if (error) {
-            setError(error.message);
+            setError(error.message || t("common.somethingWrong"));
             setOrders([]);
             return;
           }
 
           setOrders((data ?? []) as unknown as OrderRow[]);
-        })
-        .catch((error) => {
+        } catch (error) {
           if (!isMounted) return;
           setError(error instanceof Error ? error.message : t("common.somethingWrong"));
           setOrders([]);
-        })
-        .finally(() => {
-          if (isMounted) setIsLoading(false);
-        });
+        } finally {
+          if (isMounted) {
+            setHasLoadedOrders(true);
+            setIsLoading(false);
+          }
+        }
+      }
+
+      void loadOrders();
     }, 0);
 
     return () => {
@@ -117,7 +140,7 @@ export function TransactionHistoryScreen() {
           {t("transactions.subtitle")}
         </Text>
 
-        {initializing || isLoading ? (
+        {initializing || (authUser && (isLoading || !hasLoadedOrders)) ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#6915E0" />
             <Text className="mt-3 text-sm text-gray-500">
@@ -149,8 +172,6 @@ export function TransactionHistoryScreen() {
               </Text>
             </Pressable>
           </View>
-        ) : error ? (
-          <Text className="mt-6 text-sm font-semibold text-red-600">{error}</Text>
         ) : orders.length === 0 ? (
           <View className="mt-6 rounded-3xl border border-gray-100 bg-white p-5">
             <Text className="text-xl font-bold text-gray-950">
@@ -159,6 +180,11 @@ export function TransactionHistoryScreen() {
             <Text className="mt-2 text-sm leading-5 text-gray-500">
               {t("transactions.emptyBody")}
             </Text>
+            {!!error && (
+              <Text className="mt-3 text-xs font-semibold text-red-600">
+                {error}
+              </Text>
+            )}
           </View>
         ) : (
           <ScrollView

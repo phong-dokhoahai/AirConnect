@@ -171,13 +171,15 @@ const en: Dictionary = {
   "checkout.sepayPending":
     "Transfer with content {{code}}. Payment will update after SePay confirms it.",
   "checkout.sepayTransferTitle": "Bank transfer details",
-  "checkout.sepayScanHint": "Open your banking app, scan this QR, and confirm the transfer.",
+  "checkout.sepayScanHint":
+    "Open your banking app, scan this QR, and confirm the transfer.",
   "checkout.sepayAmount": "Amount",
   "checkout.sepayBank": "Bank",
   "checkout.sepayAccountNumber": "Account number",
   "checkout.sepayAccountHolder": "Account holder",
   "checkout.sepayContent": "Transfer content",
-  "checkout.sepayWaiting": "Waiting for SePay confirmation. Keep the transfer content unchanged.",
+  "checkout.sepayWaiting":
+    "Waiting for SePay confirmation. Keep the transfer content unchanged.",
   "checkout.payVnpay": "Pay with VNPay Sandbox",
   "checkout.unableLoadPackage": "Unable to load this package.",
   "checkout.emailRequired":
@@ -652,13 +654,15 @@ const vi: Dictionary = {
   "checkout.sepayPending":
     "Chuyển khoản với nội dung {{code}}. Trạng thái sẽ cập nhật sau khi SePay xác nhận.",
   "checkout.sepayTransferTitle": "Thong tin chuyen khoan",
-  "checkout.sepayScanHint": "Mo ung dung ngan hang, quet ma QR, roi xac nhan chuyen khoan.",
+  "checkout.sepayScanHint":
+    "Mo ung dung ngan hang, quet ma QR, roi xac nhan chuyen khoan.",
   "checkout.sepayAmount": "So tien",
   "checkout.sepayBank": "Ngan hang",
   "checkout.sepayAccountNumber": "So tai khoan",
   "checkout.sepayAccountHolder": "Chu tai khoan",
   "checkout.sepayContent": "Noi dung chuyen khoan",
-  "checkout.sepayWaiting": "Dang cho SePay xac nhan. Giu nguyen noi dung chuyen khoan.",
+  "checkout.sepayWaiting":
+    "Dang cho SePay xac nhan. Giu nguyen noi dung chuyen khoan.",
   "checkout.payVnpay": "Thanh toán bằng VNPay Sandbox",
   "checkout.unableLoadPackage": "Không thể tải gói này.",
   "checkout.emailRequired": "Cần email tài khoản để hoàn tất mua hàng.",
@@ -984,22 +988,22 @@ const vi: Dictionary = {
 const dictionaries: Record<LanguageCode, Dictionary> = { en, vi };
 
 const countryVi = Object.fromEntries([
-  ["Adventurer", "Nha phieu luu"],
-  ["Asia", "Chau A"],
-  ["Europe", "Chau Au"],
-  ["Explorer", "Nha kham pha"],
-  ["France", "Phap"],
-  ["Global", "Toan cau"],
-  ["Italy", "Y"],
-  ["Japan", "Nhat Ban"],
-  ["Middle East", "Trung Dong"],
-  ["North America", "Bac My"],
+  ["Adventurer", "Nhà phiêu lưu"],
+  ["Asia", "Châu Á"],
+  ["Europe", "Châu Âu"],
+  ["Explorer", "Nhà khám phá"],
+  ["France", "Pháp"],
+  ["Global", "Toàn cầu"],
+  ["Italy", "Ý"],
+  ["Japan", "Nhật Bản"],
+  ["Middle East", "Trung Đông"],
+  ["North America", "Bắc Mỹ"],
   ["Singapore", "Singapore"],
-  ["South Korea", "Han Quoc"],
-  ["Spain", "Tay Ban Nha"],
-  ["Thailand", "Thai Lan"],
-  ["United States", "Hoa Ky"],
-  ["Vietnam", "Viet Nam"],
+  ["South Korea", " Hàn Quốc"],
+  ["Spain", "Tây Ban Nha"],
+  ["Thailand", "Thái Lan"],
+  ["United States", "Hoa Kỳ"],
+  ["Vietnam", "Việt Nam"],
 ]);
 
 const phraseVi = {

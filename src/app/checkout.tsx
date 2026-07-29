@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Linking as NativeLinking,
   Pressable,
   ScrollView,
   Text,
@@ -92,8 +93,31 @@ function getSepayQrUrl(transfer: SepayPaymentResponse) {
   return `https://vietqr.app/img?${params.toString()}`;
 }
 
+function getVietQrAppId(bankCode?: string) {
+  const normalized = (bankCode || fallbackSepayBank.bankCode)
+    .trim()
+    .toUpperCase();
+  return normalized === "TCB" ? "tcb" : normalized.toLowerCase();
+}
+
+function getSepayBankDeeplink(transfer: SepayPaymentResponse) {
+  const bankCode = transfer.bankCode || fallbackSepayBank.bankCode;
+  const params = new URLSearchParams({
+    app: getVietQrAppId(bankCode),
+    ba: `${
+      transfer.accountNumber || fallbackSepayBank.accountNumber
+    }@${bankCode.toLowerCase()}`,
+    am: String(Math.round(transfer.amount)),
+    tn: transfer.paymentCode,
+    bn: transfer.accountHolder || fallbackSepayBank.accountHolder,
+    url: Linking.createURL("success"),
+  });
+
+  return `https://dl.vietqr.io/pay?${params.toString()}`;
+}
+
 export default function CheckoutRoute() {
-  const { t, translateName } = useI18n();
+  const { language, t, translateName } = useI18n();
   const { planId } = useLocalSearchParams<{ planId?: string }>();
   const {
     user: authUser,
@@ -298,6 +322,9 @@ export default function CheckoutRoute() {
         variant: "success",
       });
       setSepayTransfer(data);
+      void NativeLinking.openURL(getSepayBankDeeplink(data)).catch((error) => {
+        console.error("Unable to open banking app", error);
+      });
     } catch (error) {
       console.error("Purchase creation failed", error);
       const message = getErrorMessage(error);
@@ -423,7 +450,11 @@ export default function CheckoutRoute() {
             {[
               [
                 t("checkout.sepayAmount"),
-                formatMoney(sepayTransfer.amount, sepayTransfer.currency),
+                formatMoney(
+                  sepayTransfer.amount,
+                  sepayTransfer.currency,
+                  language,
+                ),
               ],
               [
                 t("checkout.sepayBank"),
@@ -498,7 +529,9 @@ export default function CheckoutRoute() {
           <View className="rounded-3xl bg-[#7B61FF] p-5">
             <View className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1">
               <Text className="text-xs font-semibold text-[#7B61FF]">
-                {plan.currency}
+                {language === "vi" && plan.currency === "USD"
+                  ? "VND"
+                  : plan.currency}
               </Text>
             </View>
 
@@ -521,7 +554,7 @@ export default function CheckoutRoute() {
                 {t("checkout.planPrice")}
               </Text>
               <Text className="text-2xl font-bold text-white">
-                {formatMoney(planPrice, plan.currency)}
+                {formatMoney(planPrice, plan.currency, language)}
               </Text>
             </View>
           </View>
@@ -640,7 +673,7 @@ export default function CheckoutRoute() {
             <View className="mb-3 flex-row justify-between">
               <Text className="text-gray-700">{t("checkout.planPrice")}</Text>
               <Text className="font-medium text-gray-900">
-                {formatMoney(planPrice, plan.currency)}
+                {formatMoney(planPrice, plan.currency, language)}
               </Text>
             </View>
 
@@ -648,7 +681,7 @@ export default function CheckoutRoute() {
               <View className="mb-3 flex-row justify-between">
                 <Text className="text-green-600">{t("common.discount")}</Text>
                 <Text className="font-medium text-green-600">
-                  -{formatMoney(discount, plan.currency)}
+                  -{formatMoney(discount, plan.currency, language)}
                 </Text>
               </View>
             ) : null}
@@ -656,7 +689,7 @@ export default function CheckoutRoute() {
             <View className="mb-3 flex-row justify-between">
               <Text className="text-gray-700">{t("checkout.taxesFees")}</Text>
               <Text className="font-medium text-gray-900">
-                {formatMoney(taxes, plan.currency)}
+                {formatMoney(taxes, plan.currency, language)}
               </Text>
             </View>
 
@@ -665,7 +698,7 @@ export default function CheckoutRoute() {
                 {t("common.total")}
               </Text>
               <Text className="text-lg font-bold text-[#7B61FF]">
-                {formatMoney(total, plan.currency)}
+                {formatMoney(total, plan.currency, language)}
               </Text>
             </View>
           </View>
@@ -716,7 +749,7 @@ export default function CheckoutRoute() {
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-sm text-gray-500">{t("common.total")}</Text>
           <Text className="text-2xl font-bold text-gray-900">
-            {formatMoney(total, plan.currency)}
+            {formatMoney(total, plan.currency, language)}
           </Text>
         </View>
         {purchaseError ? (

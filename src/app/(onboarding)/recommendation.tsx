@@ -14,6 +14,7 @@ import { BackButton, Flag } from "@/components/airconnect/ui";
 import { useAuth } from "@/lib/auth";
 import { getActiveRecommendationPlans } from "@/lib/catalogQueries";
 import { useI18n } from "@/lib/i18n";
+import { formatMoney } from "@/lib/planDisplay";
 
 const purposeLabels: Record<string, string> = {
   vacation: "onboarding.vacation",
@@ -114,11 +115,8 @@ function toNumber(value: number | string | null | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function formatPrice(value: number | string, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(toNumber(value));
+function formatPrice(value: number | string, currency: string, language: string) {
+  return formatMoney(toNumber(value), currency, language);
 }
 
 function formatData(plan: RecommendationPlan, unlimitedLabel: string) {
@@ -248,7 +246,7 @@ function NetworkRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function RecommendationRoute() {
-  const { t, translateName } = useI18n();
+  const { language, t, translateName } = useI18n();
   const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
   const {
     purpose = "vacation",
@@ -319,7 +317,7 @@ export default function RecommendationRoute() {
     ? {
         data: formatData(selectedPlan, t("common.unlimited")),
         validity: formatValidity(selectedPlan.validity_days, t("common.days")),
-        price: formatPrice(selectedPlan.price, selectedPlan.currency),
+        price: formatPrice(selectedPlan.price, selectedPlan.currency, language),
       }
     : null;
   const featureLabels = getPlanFeatures(selectedPlan, [

@@ -1,7 +1,8 @@
 import { ChevronRight } from "lucide-react-native";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import type { SettingRow } from "../types";
+import { SwitchButton } from "./SwitchButton";
 
 export function SettingItem({
   item,
@@ -18,8 +19,13 @@ export function SettingItem({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityRole={
+        item.toggle ? "switch" : onPress ? "button" : undefined
+      }
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={
+        item.toggle ? { checked: !!item.toggled } : undefined
+      }
       className="flex-row items-center px-4 py-4 border-b border-gray-50"
     >
       <View
@@ -45,7 +51,7 @@ export function SettingItem({
       </View>
 
       {item.toggle ? (
-        <Switch value={!!item.toggled} />
+        <SwitchButton value={!!item.toggled} />
       ) : !item.danger ? (
         <ChevronRight size={18} color="#9CA3AF" />
       ) : null}

@@ -47,7 +47,7 @@ export function ProfileHeaderCard({
         <Text className="text-sm text-gray-500 mt-1">{profileUser.email}</Text>
 
         <View className="flex-row flex-wrap mt-3">
-          <View className="flex-row items-center bg-[#F5F0FF] px-3 py-2 rounded-full mr-2">
+          <View className="flex-row items-center bg-[#F5F0FF] px-3 py-2 rounded-full mr-2 mb-2">
             <Star size={14} color="#6915E0" />
             <Text className="text-xs font-semibold text-[#6915E0] ml-1">
               {translateName(profileUser.tier)}

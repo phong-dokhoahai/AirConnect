@@ -9,6 +9,7 @@ import {
   getCountries,
   getRegions,
 } from "./catalogQueries";
+import { formatMoney } from "./planDisplay";
 
 type QueryError = {
   message?: string;
@@ -101,11 +102,8 @@ function toNumber(value: number | string | null | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function formatPrice(value: number | string, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(toNumber(value));
+function formatPrice(value: number | string, currency: string, language: string) {
+  return formatMoney(toNumber(value), currency, language);
 }
 
 function formatData(plan: CatalogPlanRow) {
@@ -189,6 +187,7 @@ function getLowestPriceForRegion(region: RegionRow, plans: CatalogPlanRow[]) {
 function mapPopularDestinations(
   countries: CountryRow[],
   plans: CatalogPlanRow[],
+  language: string,
 ): PopularDestination[] {
   return countries.map((country) => {
     const plan = getLowestPriceForCountry(country, plans);
@@ -198,7 +197,9 @@ function mapPopularDestinations(
       id: iso2.toLowerCase(),
       name: country.name,
       flag: flagFromIso2(iso2),
-      price: plan ? formatPrice(plan.price, plan.currency) : "Check plans",
+      price: plan
+        ? formatPrice(plan.price, plan.currency, language)
+        : "Check plans",
       image: country.display_emoji ?? "\uD83C\uDF0D",
     };
   });
@@ -207,6 +208,7 @@ function mapPopularDestinations(
 function mapRegionalPlans(
   regions: RegionRow[],
   plans: CatalogPlanRow[],
+  language: string,
 ): RegionalPlan[] {
   return regions.map((region) => {
     const plan = getLowestPriceForRegion(region, plans);
@@ -222,14 +224,19 @@ function mapRegionalPlans(
       countries: (region.region_countries ?? []).flatMap((entry) =>
         rows(entry.countries),
       ).length,
-      price: plan ? formatPrice(plan.price, plan.currency) : "Check plans",
+      price: plan
+        ? formatPrice(plan.price, plan.currency, language)
+        : "Check plans",
       icon: region.display_icon ?? "\uD83D\uDDFA\uFE0F",
       colors,
     };
   });
 }
 
-function mapFeaturedPlans(plans: CatalogPlanRow[]): FeaturedPlan[] {
+function mapFeaturedPlans(
+  plans: CatalogPlanRow[],
+  language: string,
+): FeaturedPlan[] {
   return plans.map((plan) => {
     const [country] = getPlanCountries(plan);
     const [region] = getPlanRegions(plan);
@@ -244,17 +251,19 @@ function mapFeaturedPlans(plans: CatalogPlanRow[]): FeaturedPlan[] {
       data: formatData(plan),
       validity: formatValidity(plan.validity_days),
       network: getNetworkLabel(plan),
-      price: formatPrice(plan.price, plan.currency),
+      price: formatPrice(plan.price, plan.currency, language),
       originalPrice:
         originalPrice > toNumber(plan.price)
-          ? formatPrice(originalPrice, plan.currency)
+          ? formatPrice(originalPrice, plan.currency, language)
           : undefined,
       savings: discountPercent > 0 ? `${discountPercent}%` : undefined,
     };
   });
 }
 
-export async function getCatalogData(): Promise<CatalogApiResponse> {
+export async function getCatalogData(
+  language = "en",
+): Promise<CatalogApiResponse> {
   const [countriesResult, regionsResult, plansResult] = await Promise.all([
     getCountries(),
     getRegions(),
@@ -275,9 +284,13 @@ export async function getCatalogData(): Promise<CatalogApiResponse> {
 
   return {
     data: {
-      popularDestinations: mapPopularDestinations(countries, plans).slice(0, 9),
-      regionalPlans: mapRegionalPlans(regions, plans),
-      featuredPlans: mapFeaturedPlans(plans).slice(0, 6),
+      popularDestinations: mapPopularDestinations(
+        countries,
+        plans,
+        language,
+      ).slice(0, 9),
+      regionalPlans: mapRegionalPlans(regions, plans, language),
+      featuredPlans: mapFeaturedPlans(plans, language).slice(0, 6),
     },
     error: null,
   };

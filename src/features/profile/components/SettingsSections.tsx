@@ -2,6 +2,8 @@ import {
   Bell,
   BookOpen,
   Check,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   FileText,
   Globe,
@@ -58,10 +60,35 @@ type SettingsDetail = {
   rows: string[];
 };
 
+const planFaqs = [
+  {
+    questionKey: "plan.howEsimWorks",
+    answerKey: "plan.howEsimWorksAnswer",
+  },
+  {
+    questionKey: "plan.activationStart",
+    answerKey: "plan.activationStartAnswer",
+  },
+  {
+    questionKey: "plan.useHotspot",
+    answerKey: "plan.useHotspotAnswer",
+  },
+  {
+    questionKey: "plan.deviceCompatible",
+    answerKey: "plan.deviceCompatibleAnswer",
+  },
+];
+
 export function SettingsSections(props: SettingsSectionsProps) {
   const { t } = useI18n();
   const [detailId, setDetailId] = useState<SettingsDetailId | null>(null);
-  const detail = detailId ? getSettingsDetail(detailId, t) : null;
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const detail =
+    detailId && detailId !== "faq" ? getSettingsDetail(detailId, t) : null;
+  const closeDetail = () => {
+    setDetailId(null);
+    setExpandedFaq(null);
+  };
 
   return (
     <>
@@ -70,7 +97,13 @@ export function SettingsSections(props: SettingsSectionsProps) {
       <SecuritySettings {...props} openDetail={setDetailId} />
       <SupportSettings openDetail={setDetailId} />
       <AccountActions error={props.error} signOut={props.signOut} />
-      <SettingsDetailModal detail={detail} onClose={() => setDetailId(null)} />
+      <SettingsFaqModal
+        visible={detailId === "faq"}
+        expandedFaq={expandedFaq}
+        setExpandedFaq={setExpandedFaq}
+        onClose={closeDetail}
+      />
+      <SettingsDetailModal detail={detail} onClose={closeDetail} />
     </>
   );
 }
@@ -345,7 +378,7 @@ function SupportSettings({
 }
 
 function getSettingsDetail(
-  id: SettingsDetailId,
+  id: Exclude<SettingsDetailId, "faq">,
   t: (key: string) => string,
 ): SettingsDetail {
   return {
@@ -353,6 +386,82 @@ function getSettingsDetail(
     body: t(`profile.detail.${id}.body`),
     rows: [1, 2, 3].map((index) => t(`profile.detail.${id}.row${index}`)),
   };
+}
+
+function SettingsFaqModal({
+  visible,
+  expandedFaq,
+  setExpandedFaq,
+  onClose,
+}: {
+  visible: boolean;
+  expandedFaq: number | null;
+  setExpandedFaq: Dispatch<SetStateAction<number | null>>;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
+        <Pressable className="rounded-t-3xl bg-white p-5" onPress={() => {}}>
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-gray-950">
+              {t("plan.faq")}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("common.back")}
+              onPress={onClose}
+              className="rounded-full bg-gray-100 p-2"
+            >
+              <X size={18} color="#4B5563" />
+            </Pressable>
+          </View>
+
+          <View className="overflow-hidden rounded-2xl border border-[#F3F4F6] bg-white">
+            {planFaqs.map((faq, index) => (
+              <View key={faq.questionKey}>
+                {index > 0 && <View className="h-px bg-[#F3F4F6]" />}
+
+                <Pressable
+                  onPress={() =>
+                    setExpandedFaq((current) =>
+                      current === index ? null : index,
+                    )
+                  }
+                  className="flex-row items-center justify-between px-5 py-4"
+                >
+                  <Text className="flex-1 pr-4 font-medium text-[#111827]">
+                    {t(faq.questionKey)}
+                  </Text>
+
+                  {expandedFaq === index ? (
+                    <ChevronUp size={20} color="#9CA3AF" />
+                  ) : (
+                    <ChevronDown size={20} color="#9CA3AF" />
+                  )}
+                </Pressable>
+
+                {expandedFaq === index && (
+                  <View className="px-5 pb-4">
+                    <Text className="text-sm leading-5 text-[#4B5563]">
+                      {t(faq.answerKey)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 }
 
 function SettingsDetailModal({

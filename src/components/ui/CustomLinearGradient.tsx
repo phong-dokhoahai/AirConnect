@@ -1,7 +1,4 @@
-import {
-  LinearGradient,
-  type LinearGradientProps,
-} from "expo-linear-gradient";
+import { LinearGradient, type LinearGradientProps } from "expo-linear-gradient";
 
 type CustomLinearGradientProps = Omit<LinearGradientProps, "colors"> & {
   borderRadius?: number;
