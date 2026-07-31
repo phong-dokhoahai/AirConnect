@@ -405,8 +405,8 @@ Behavior:
 
 * Signed-in checkout can create a pending Stripe or SePay payment order with product metadata for future fulfillment.
 * SePay checkout opens a VietQR bank-app deeplink with amount/content after order creation, renders VietQR transfer details as fallback, and waits for webhook confirmation.
-* Stripe and SePay webhooks only update payment status on the order.
-* eSIM access is granted by a separate fulfillment service after payment confirmation; payment webhooks must not create or unlock purchased products.
+* Stripe and SePay webhooks update payment status on the order.
+* After payment confirmation, a database fulfillment function grants eSIM access by creating the linked `user_esims` row idempotently.
 * Buyer name/email come from the signed-in Google account.
 
 ---
