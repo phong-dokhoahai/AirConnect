@@ -1,5 +1,6 @@
 export type PopularDestination = {
   id: string;
+  planId?: string;
   name: string;
   flag: string;
   price: string;

@@ -32,6 +32,7 @@ const en: Dictionary = {
   "common.buyNow": "Buy Now",
   "common.cancelled": "Canceled",
   "common.checkingSignIn": "Checking sign in...",
+  "common.clear": "Clear",
   "common.completed": "Completed",
   "common.continue": "Continue",
   "common.continueWithGoogle": "Continue with Google",
@@ -65,6 +66,9 @@ const en: Dictionary = {
   "common.retry": "Retry",
   "common.save": "Save {{value}}",
   "common.searchCountryRegion": "Search country or region",
+  "common.searchResults": "Search results",
+  "common.resultsCount": "{{count}} results",
+  "common.noSearchResults": "No results for \"{{query}}\"",
   "common.seeAll": "See All",
   "common.signInRequired": "Sign in to continue",
   "common.somethingWrong": "Something went wrong",
@@ -515,6 +519,7 @@ const vi: Dictionary = {
   "common.buyNow": "Mua ngay",
   "common.cancelled": "Đã hủy",
   "common.checkingSignIn": "Đang kiểm tra đăng nhập...",
+  "common.clear": "Xóa",
   "common.completed": "Hoàn tất",
   "common.continue": "Tiếp tục",
   "common.continueWithGoogle": "Tiếp tục với Google",
@@ -548,6 +553,9 @@ const vi: Dictionary = {
   "common.retry": "Thử lại",
   "common.save": "Tiết kiệm {{value}}",
   "common.searchCountryRegion": "Tìm quốc gia hoặc khu vực",
+  "common.searchResults": "Kết quả tìm kiếm",
+  "common.resultsCount": "{{count}} kết quả",
+  "common.noSearchResults": "Không có kết quả cho \"{{query}}\"",
   "common.seeAll": "Xem tất cả",
   "common.signInRequired": "Đăng nhập để tiếp tục",
   "common.somethingWrong": "Đã xảy ra lỗi",
@@ -987,7 +995,7 @@ const vi: Dictionary = {
 
 const dictionaries: Record<LanguageCode, Dictionary> = { en, vi };
 
-const countryVi = Object.fromEntries([
+const countryVi: Dictionary = Object.fromEntries([
   ["Adventurer", "Nhà phiêu lưu"],
   ["Asia", "Châu Á"],
   ["Europe", "Châu Âu"],
@@ -1006,7 +1014,7 @@ const countryVi = Object.fromEntries([
   ["Vietnam", "Việt Nam"],
 ]);
 
-const phraseVi = {
+const phraseVi: Dictionary = {
   "Activation in under 2 minutes": "Kích hoạt trong chưa tới 2 phút",
   "Email & messaging": "Email và nhắn tin",
   "Instant activation": "Kích hoạt tức thì",

@@ -25,7 +25,7 @@ Functions. Configure these function secrets before serving or deploying them:
 supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 supabase secrets set SEPAY_API_KEY=your_sepay_api_key
 supabase secrets set SEPAY_BANK_CODE=TCB SEPAY_ACCOUNT_NUMBER=19070208496017 SEPAY_ACCOUNT_HOLDER="DO KHOA HAI PHONG"
-supabase functions deploy stripe-payment
+supabase functions deploy stripe-payment --no-verify-jwt
 supabase functions deploy sepay-payment
 ```
 

@@ -101,14 +101,24 @@ async function serviceRpc<T>(name: string, body: unknown) {
   return data;
 }
 
+type StripeEventObject = {
+  id?: string;
+  payment_intent?: string;
+  metadata?: { orderId?: string };
+};
+
+function getOrderId(object?: StripeEventObject) {
+  return object?.metadata?.orderId?.trim() ?? "";
+}
+
 async function updateOrder(orderId: string, status: string, providerPaymentId?: string) {
-  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
+  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}&select=id`, {
     method: "PATCH",
     headers: {
       apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
       authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
       "content-type": "application/json",
-      prefer: "return=minimal",
+      prefer: "return=representation",
     },
     body: JSON.stringify({
       status,
@@ -118,6 +128,37 @@ async function updateOrder(orderId: string, status: string, providerPaymentId?: 
   });
 
   if (!response.ok) throw new Error(await response.text());
+
+  const rows = (await response.json()) as { id: string }[];
+  if (!rows[0]) throw new Error(`Order not found: ${orderId}`);
+}
+
+async function findOrderIdByProviderPaymentId(providerPaymentId: string) {
+  const response = await fetch(
+    `${env("SUPABASE_URL")}/rest/v1/orders?payment_provider=eq.stripe&provider_payment_id=eq.${providerPaymentId}&select=id&limit=1`,
+    {
+      headers: {
+        apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
+        authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+    },
+  );
+
+  if (!response.ok) throw new Error(await response.text());
+
+  const rows = (await response.json()) as { id: string }[];
+  return rows[0]?.id ?? "";
+}
+
+async function getPaymentIntentOrderId(paymentIntentId: string, stripeSecret: string) {
+  const response = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
+    headers: { authorization: `Bearer ${stripeSecret}` },
+  });
+
+  if (!response.ok) throw new Error(await response.text());
+
+  const intent = (await response.json()) as { metadata?: { orderId?: string } };
+  return intent.metadata?.orderId?.trim() ?? "";
 }
 
 Deno.serve(async (request: Request) => {
@@ -141,23 +182,32 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Invalid signature" }, 401);
     }
 
-    const event = JSON.parse(rawBody) as {
-      type: string;
-      data?: { object?: { id?: string; metadata?: { orderId?: string } } };
-    };
+    const event = JSON.parse(rawBody) as { type: string; data?: { object?: StripeEventObject } };
     const object = event.data?.object;
-    const orderId = object?.metadata?.orderId;
+    const fallbackOrderId = object?.id ? await findOrderIdByProviderPaymentId(object.id) : "";
+    const intentOrderId = object?.payment_intent
+      ? await getPaymentIntentOrderId(object.payment_intent, stripeSecret)
+      : "";
+    const orderId = getOrderId(object) || intentOrderId || fallbackOrderId;
 
-    if (orderId && event.type === "checkout.session.completed") {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "payment_intent.succeeded" ||
+      event.type === "charge.succeeded"
+    ) {
+      if (!orderId) return json({ error: `Missing orderId metadata for ${event.type}` }, 400);
       await updateOrder(orderId, "paid", object?.id);
       await serviceRpc("fulfill_paid_payment_order", { p_order_id: orderId });
+      return json({ received: true });
     }
 
-    if (orderId && event.type === "checkout.session.expired") {
+    if (event.type === "checkout.session.expired") {
+      if (!orderId) return json({ error: `Missing orderId metadata for ${event.type}` }, 400);
       await updateOrder(orderId, "canceled", object?.id);
+      return json({ received: true });
     }
 
-    return json({ received: true });
+    return json({ received: true, ignored: event.type });
   }
 
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -204,6 +254,8 @@ Deno.serve(async (request: Request) => {
       cancel_url: `${body.cancelUrl}?orderId=${row.order_id}`,
       "metadata[orderId]": row.order_id,
       "metadata[paymentCode]": row.payment_code,
+      "payment_intent_data[metadata][orderId]": row.order_id,
+      "payment_intent_data[metadata][paymentCode]": row.payment_code,
     }),
   });
   const sessionData = (await session.json()) as { id?: string; url?: string; error?: { message?: string } };
@@ -211,6 +263,8 @@ Deno.serve(async (request: Request) => {
   if (!session.ok || !sessionData.url) {
     return json({ error: sessionData.error?.message ?? "Unable to create Stripe session" }, 400);
   }
+
+  await updateOrder(row.order_id, "pending", sessionData.id);
 
   return json({ orderId: row.order_id, checkoutUrl: sessionData.url });
 });

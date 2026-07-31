@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useI18n } from "@/lib/i18n";
 
 import { SectionHeader } from "./SectionHeader";
@@ -6,8 +6,10 @@ import type { PopularDestination } from "./types";
 
 export function PopularDestinationsSection({
   destinations,
+  onViewDetails,
 }: {
   destinations: PopularDestination[];
+  onViewDetails: (planId: string) => void;
 }) {
   const { t, translateName } = useI18n();
 
@@ -23,10 +25,13 @@ export function PopularDestinationsSection({
         contentContainerStyle={{ paddingHorizontal: 24 }}
       >
         {destinations.map((item) => (
-          <Pressable
+          <TouchableOpacity
             key={item.id}
             className="bg-white rounded-3xl p-4 mr-3 border border-[#F3F4F6]"
             style={{ width: 130 }}
+            activeOpacity={0.8}
+            disabled={!item.planId}
+            onPress={() => item.planId && onViewDetails(item.planId)}
           >
             <Text style={{ fontSize: 36 }}>{item.image}</Text>
             <Text style={{ fontSize: 24 }}>{item.flag}</Text>
@@ -41,7 +46,7 @@ export function PopularDestinationsSection({
             <Text className="text-[#7B61FF] text-sm mt-1">
               {t("common.from", { value: item.price })}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>

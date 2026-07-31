@@ -195,6 +195,7 @@ function mapPopularDestinations(
 
     return {
       id: iso2.toLowerCase(),
+      planId: plan?.id,
       name: country.name,
       flag: flagFromIso2(iso2),
       price: plan
