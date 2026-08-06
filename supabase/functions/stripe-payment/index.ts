@@ -85,34 +85,8 @@ async function supabaseRpc<T>(name: string, body: unknown, authorization: string
   return response.ok ? { data, error: null } : { data: null, error: data };
 }
 
-async function serviceRpc<T>(name: string, body: unknown) {
-  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/${name}`, {
-    method: "POST",
-    headers: {
-      apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
-      authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  const data = (await response.json()) as T;
-  if (!response.ok) throw new Error(JSON.stringify(data));
-  return data;
-}
-
-type StripeEventObject = {
-  id?: string;
-  payment_intent?: string;
-  metadata?: { orderId?: string };
-};
-
-function getOrderId(object?: StripeEventObject) {
-  return object?.metadata?.orderId?.trim() ?? "";
-}
-
 async function updateOrder(orderId: string, status: string, providerPaymentId?: string) {
-  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}&select=id`, {
+  await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
     method: "PATCH",
     headers: {
       apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
@@ -126,39 +100,6 @@ async function updateOrder(orderId: string, status: string, providerPaymentId?: 
       paid_at: status === "paid" ? new Date().toISOString() : null,
     }),
   });
-
-  if (!response.ok) throw new Error(await response.text());
-
-  const rows = (await response.json()) as { id: string }[];
-  if (!rows[0]) throw new Error(`Order not found: ${orderId}`);
-}
-
-async function findOrderIdByProviderPaymentId(providerPaymentId: string) {
-  const response = await fetch(
-    `${env("SUPABASE_URL")}/rest/v1/orders?payment_provider=eq.stripe&provider_payment_id=eq.${providerPaymentId}&select=id&limit=1`,
-    {
-      headers: {
-        apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
-        authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
-      },
-    },
-  );
-
-  if (!response.ok) throw new Error(await response.text());
-
-  const rows = (await response.json()) as { id: string }[];
-  return rows[0]?.id ?? "";
-}
-
-async function getPaymentIntentOrderId(paymentIntentId: string, stripeSecret: string) {
-  const response = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
-    headers: { authorization: `Bearer ${stripeSecret}` },
-  });
-
-  if (!response.ok) throw new Error(await response.text());
-
-  const intent = (await response.json()) as { metadata?: { orderId?: string } };
-  return intent.metadata?.orderId?.trim() ?? "";
 }
 
 Deno.serve(async (request: Request) => {
@@ -197,8 +138,6 @@ Deno.serve(async (request: Request) => {
     ) {
       if (!orderId) return json({ error: `Missing orderId metadata for ${event.type}` }, 400);
       await updateOrder(orderId, "paid", object?.id);
-      await serviceRpc("fulfill_paid_payment_order", { p_order_id: orderId });
-      return json({ received: true });
     }
 
     if (event.type === "checkout.session.expired") {

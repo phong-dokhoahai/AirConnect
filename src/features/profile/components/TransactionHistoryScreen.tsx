@@ -67,13 +67,28 @@ export function TransactionHistoryScreen() {
     setHasLoadedOrders(false);
     setError(null);
 
-    try {
-      const { data, error } = await getUserOrders(authUser.id);
+        try {
+          const { data, error } = await getUserOrders(currentUserId);
 
-      if (error) {
-        setError(error.message || t("common.somethingWrong"));
-        setOrders([]);
-        return;
+          if (!isMounted) return;
+
+          if (error) {
+            setError(error.message || t("common.somethingWrong"));
+            setOrders([]);
+            return;
+          }
+
+          setOrders((data ?? []) as unknown as OrderRow[]);
+        } catch (error) {
+          if (!isMounted) return;
+          setError(error instanceof Error ? error.message : t("common.somethingWrong"));
+          setOrders([]);
+        } finally {
+          if (isMounted) {
+            setHasLoadedOrders(true);
+            setIsLoading(false);
+          }
+        }
       }
 
       setOrders((data ?? []) as unknown as OrderRow[]);
