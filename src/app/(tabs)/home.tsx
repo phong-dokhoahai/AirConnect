@@ -34,13 +34,14 @@ const emptyCatalog: CatalogState = {
 export default function HomeRoute() {
   const router = useRouter();
   const { user: authUser } = useAuth();
-  const { language, t } = useI18n();
+  const { language, t, translateName } = useI18n();
 
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [catalog, setCatalog] = useState<CatalogState>(emptyCatalog);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const searchQuery = search.trim();
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -51,6 +52,43 @@ export default function HomeRoute() {
     return t("home.goodEvening");
   }, [t]);
   const profileUser = authUser ? getProfileUser(authUser, language) : null;
+  const filteredCatalog = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+
+    if (!query) return catalog;
+
+    const matches = (...values: (string | undefined)[]) =>
+      values.some((value) => {
+        if (!value) return false;
+        return (
+          value.toLowerCase().includes(query) ||
+          translateName(value).toLowerCase().includes(query)
+        );
+      });
+
+    return {
+      popularDestinations: catalog.popularDestinations.filter((destination) =>
+        matches(destination.name, destination.price),
+      ),
+      regionalPlans: catalog.regionalPlans.filter((plan) =>
+        matches(plan.name, plan.price),
+      ),
+      featuredPlans: catalog.featuredPlans.filter((plan) =>
+        matches(
+          plan.country,
+          plan.data,
+          plan.validity,
+          plan.network,
+          plan.price,
+        ),
+      ),
+    };
+  }, [catalog, searchQuery, translateName]);
+  const searchResultCount =
+    filteredCatalog.popularDestinations.length +
+    filteredCatalog.regionalPlans.length +
+    filteredCatalog.featuredPlans.length;
+  const isSearching = searchQuery.length > 0;
 
   const toggleFavorite = (planId: string) => {
     setFavorites((prev) =>
@@ -108,7 +146,20 @@ export default function HomeRoute() {
           search={search}
           onSearchChange={setSearch}
         />
-        <PromoBanner />
+        {isSearching ? (
+          <View className="px-6 pt-5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-[#111827]">
+                {t("common.searchResults")}
+              </Text>
+              <Text className="text-sm font-medium text-[#6B7280]">
+                {t("common.resultsCount", { count: searchResultCount })}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <PromoBanner />
+        )}
 
         {isCatalogLoading ? (
           <View className="mx-6 mt-6 rounded-2xl border border-[#F3F4F6] bg-white p-4">
@@ -132,19 +183,34 @@ export default function HomeRoute() {
           </View>
         ) : null}
 
-        <PopularDestinationsSection
-          destinations={catalog.popularDestinations}
-        />
-        <RegionalPlansSection
-          plans={catalog.regionalPlans}
-          onViewDetails={viewPlanDetails}
-        />
-        <RecommendedPlansSection
-          favorites={favorites}
-          plans={catalog.featuredPlans}
-          onToggleFavorite={toggleFavorite}
-          onViewDetails={viewPlanDetails}
-        />
+        {isSearching && searchResultCount === 0 && !isCatalogLoading && !catalogError ? (
+          <View className="px-6 py-16">
+            <Text className="text-center text-sm font-medium text-[#9CA3AF]">
+              {t("common.noSearchResults", { query: searchQuery })}
+            </Text>
+          </View>
+        ) : null}
+
+        {(!isSearching || filteredCatalog.popularDestinations.length > 0) && (
+          <PopularDestinationsSection
+            destinations={filteredCatalog.popularDestinations}
+            onViewDetails={viewPlanDetails}
+          />
+        )}
+        {(!isSearching || filteredCatalog.regionalPlans.length > 0) && (
+          <RegionalPlansSection
+            plans={filteredCatalog.regionalPlans}
+            onViewDetails={viewPlanDetails}
+          />
+        )}
+        {(!isSearching || filteredCatalog.featuredPlans.length > 0) && (
+          <RecommendedPlansSection
+            favorites={favorites}
+            plans={filteredCatalog.featuredPlans}
+            onToggleFavorite={toggleFavorite}
+            onViewDetails={viewPlanDetails}
+          />
+        )}
       </ScrollView>
     </View>
   );

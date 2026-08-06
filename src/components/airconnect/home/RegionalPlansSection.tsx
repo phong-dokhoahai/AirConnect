@@ -24,7 +24,8 @@ export function RegionalPlansSection({
             key={item.id}
             style={{ width: "48%" }}
             className="bg-white rounded-3xl p-4 border border-[#F3F4F6]"
-            onPress={() => onViewDetails(item.planId ?? item.id)}
+            disabled={!item.planId}
+            onPress={() => item.planId && onViewDetails(item.planId)}
           >
             <CustomLinearGradient
               colors={item.colors}

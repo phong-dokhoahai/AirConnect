@@ -295,12 +295,12 @@ export default function CheckoutRoute() {
           setPurchaseNotice({ message, variant: "error" });
           return;
         }
-
+        console.log("payment:", JSON.stringify(payment, null, 2));
         await WebBrowser.openBrowserAsync(payment.data.checkoutUrl);
-        setPurchaseNotice({
-          message: t("checkout.paymentPending"),
-          variant: "success",
-        });
+        // setPurchaseNotice({
+        //   message: t("checkout.paymentPending"),
+        //   variant: "success",
+        // });
         return;
       }
 

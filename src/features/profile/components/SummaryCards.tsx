@@ -1,6 +1,5 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useI18n } from "@/lib/i18n";
-import { Link } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 
 import type { QuickAction, StatItem } from "../types";
@@ -96,19 +95,6 @@ function QuickActionCard({
       <Text className="text-xs text-gray-500 mt-1">{t(item.subKey)}</Text>
     </>
   );
-
-  if (item.screen === "/orders") {
-    return (
-      <Link href="/orders" asChild>
-        <Pressable
-          className="bg-white rounded-3xl p-4 border border-gray-100"
-          style={{ width: "48%" }}
-        >
-          {card}
-        </Pressable>
-      </Link>
-    );
-  }
 
   return (
     <Pressable

@@ -5,7 +5,7 @@ import { getPlanDisplay, type PlanDisplayRow } from "@/lib/planDisplay";
 import { getUserOrders } from "@/lib/purchaseQueries";
 import { useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Globe, Package } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -60,17 +60,12 @@ export function TransactionHistoryScreen() {
   const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
+  const loadOrders = useCallback(async () => {
     if (!authUser) return;
-    const currentUserId = authUser.id;
 
-    const timer = setTimeout(() => {
-      async function loadOrders() {
-        setIsLoading(true);
-        setHasLoadedOrders(false);
-        setError(null);
+    setIsLoading(true);
+    setHasLoadedOrders(false);
+    setError(null);
 
         try {
           const { data, error } = await getUserOrders(currentUserId);
@@ -96,14 +91,35 @@ export function TransactionHistoryScreen() {
         }
       }
 
+      setOrders((data ?? []) as unknown as OrderRow[]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t("common.somethingWrong"));
+      setOrders([]);
+    } finally {
+      setHasLoadedOrders(true);
+      setIsLoading(false);
+    }
+  }, [authUser, t]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
       void loadOrders();
     }, 0);
 
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [authUser, t]);
+    return () => clearTimeout(timer);
+  }, [loadOrders]);
+
+  useEffect(() => {
+    if (authUser) return;
+
+    const timer = setTimeout(() => {
+      setOrders([]);
+      setHasLoadedOrders(false);
+      setError(null);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [authUser]);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -161,16 +177,38 @@ export function TransactionHistoryScreen() {
         ) : orders.length === 0 ? (
           <View className="mt-6 rounded-3xl border border-gray-100 bg-white p-5">
             <Text className="text-xl font-bold text-gray-950">
-              {t("transactions.emptyTitle")}
+              {error ? t("common.somethingWrong") : t("transactions.emptyTitle")}
             </Text>
             <Text className="mt-2 text-sm leading-5 text-gray-500">
-              {t("transactions.emptyBody")}
+              {error ?? t("transactions.emptyBody")}
             </Text>
-            {!!error && (
-              <Text className="mt-3 text-xs font-semibold text-red-600">
-                {error}
+            {error ? (
+              <Pressable
+                onPress={loadOrders}
+                className="mt-5 self-start rounded-2xl bg-[#6915E0] px-5 py-3"
+              >
+                <Text className="font-bold text-white">
+                  {t("common.retry")}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : error ? (
+          <View className="mt-6 rounded-3xl border border-gray-100 bg-white p-5">
+            <Text className="text-xl font-bold text-gray-950">
+              {t("common.somethingWrong")}
+            </Text>
+            <Text className="mt-2 text-sm leading-5 text-gray-500">
+              {error}
+            </Text>
+            <Pressable
+              onPress={loadOrders}
+              className="mt-5 self-start rounded-2xl bg-[#6915E0] px-5 py-3"
+            >
+              <Text className="font-bold text-white">
+                {t("common.retry")}
               </Text>
-            )}
+            </Pressable>
           </View>
         ) : (
           <ScrollView

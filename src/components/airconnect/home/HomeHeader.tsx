@@ -1,6 +1,6 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useI18n } from "@/lib/i18n";
-import { Bell, Search } from "lucide-react-native";
+import { Bell, Search, X } from "lucide-react-native";
 import { Pressable, Text, TextInput, View } from "react-native";
 
 export function HomeHeader({
@@ -85,8 +85,18 @@ export function HomeHeader({
           value={search}
           onChangeText={onSearchChange}
           placeholder={t("home.searchPlaceholder")}
-          className="bg-[#F3F4F6] rounded-2xl pl-12 pr-4 py-4 text-[#111827]"
+          className="bg-[#F3F4F6] rounded-2xl pl-12 pr-12 py-4 text-[#111827]"
         />
+
+        {search.trim() ? (
+          <Pressable
+            accessibilityLabel={t("common.clear")}
+            className="absolute right-4 top-4"
+            onPress={() => onSearchChange("")}
+          >
+            <X size={20} color="#9CA3AF" />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

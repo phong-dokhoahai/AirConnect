@@ -10,6 +10,7 @@ import {
   Signal,
   Smartphone,
   Wifi,
+  X,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -440,7 +441,7 @@ function EmptyState({ onBrowse }: { onBrowse?: () => void }) {
 
 export default function MyESIMsRoute() {
   const router = useRouter();
-  const { language, t } = useI18n();
+  const { language, t, translateName } = useI18n();
   const {
     user: authUser,
     initializing,
@@ -513,6 +514,8 @@ export default function MyESIMsRoute() {
   }, [loadEsims]);
 
   const filtered = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
     return esims.filter((e) => {
       const matchFilter =
         activeFilter === "all" ||
@@ -521,15 +524,18 @@ export default function MyESIMsRoute() {
         (activeFilter === "expired" && e.status === "expired");
 
       const matchSearch =
-        searchQuery === "" ||
-        e.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.planName.toLowerCase().includes(searchQuery.toLowerCase());
+        query === "" ||
+        [e.country, translateName(e.country), e.planName, e.data, e.network]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
 
       return matchFilter && matchSearch;
     });
-  }, [activeFilter, esims, searchQuery]);
+  }, [activeFilter, esims, searchQuery, translateName]);
 
   const activeCount = esims.filter((e) => e.status === "active").length;
+  const normalizedSearchQuery = searchQuery.trim();
 
   if (initializing) {
     return (
@@ -665,10 +671,30 @@ export default function MyESIMsRoute() {
               onChangeText={setSearchQuery}
               placeholder={t("common.searchCountryRegion")}
               placeholderTextColor="#9CA3AF"
-              className="flex-1 ml-3 text-sm text-[#374151]"
+              className="flex-1 ml-3 pr-3 text-sm text-[#374151]"
             />
+
+            {normalizedSearchQuery ? (
+              <Pressable
+                accessibilityLabel={t("common.clear")}
+                onPress={() => setSearchQuery("")}
+              >
+                <X size={16} color="#9CA3AF" />
+              </Pressable>
+            ) : null}
           </View>
         </View>
+
+        {normalizedSearchQuery ? (
+          <View className="mb-3 flex-row items-center justify-between px-6">
+            <Text className="text-sm font-semibold text-[#111827]">
+              {t("common.searchResults")}
+            </Text>
+            <Text className="text-xs font-medium text-[#6B7280]">
+              {t("common.resultsCount", { count: filtered.length })}
+            </Text>
+          </View>
+        ) : null}
 
         <ScrollView
           horizontal
@@ -749,7 +775,7 @@ export default function MyESIMsRoute() {
                 }}
               />
             ))
-          ) : searchQuery !== "" ? (
+          ) : normalizedSearchQuery !== "" ? (
             <Animated.View
               key="no-results"
               entering={FadeIn.duration(250)}
@@ -757,7 +783,7 @@ export default function MyESIMsRoute() {
               className="py-12 items-center"
             >
               <Text className="text-[#9CA3AF] text-sm">
-                {t("myEsims.noResults", { query: searchQuery })}
+                {t("myEsims.noResults", { query: normalizedSearchQuery })}
               </Text>
             </Animated.View>
           ) : (

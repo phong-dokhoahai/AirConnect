@@ -85,30 +85,14 @@ async function supabaseRpc<T>(name: string, body: unknown, authorization: string
   return response.ok ? { data, error: null } : { data: null, error: data };
 }
 
-async function serviceRpc<T>(name: string, body: unknown) {
-  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/${name}`, {
-    method: "POST",
-    headers: {
-      apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
-      authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  const data = (await response.json()) as T;
-  if (!response.ok) throw new Error(JSON.stringify(data));
-  return data;
-}
-
 async function updateOrder(orderId: string, status: string, providerPaymentId?: string) {
-  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
+  await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
     method: "PATCH",
     headers: {
       apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
       authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
       "content-type": "application/json",
-      prefer: "return=minimal",
+      prefer: "return=representation",
     },
     body: JSON.stringify({
       status,
@@ -116,8 +100,6 @@ async function updateOrder(orderId: string, status: string, providerPaymentId?: 
       paid_at: status === "paid" ? new Date().toISOString() : null,
     }),
   });
-
-  if (!response.ok) throw new Error(await response.text());
 }
 
 Deno.serve(async (request: Request) => {
@@ -141,23 +123,30 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Invalid signature" }, 401);
     }
 
-    const event = JSON.parse(rawBody) as {
-      type: string;
-      data?: { object?: { id?: string; metadata?: { orderId?: string } } };
-    };
+    const event = JSON.parse(rawBody) as { type: string; data?: { object?: StripeEventObject } };
     const object = event.data?.object;
-    const orderId = object?.metadata?.orderId;
+    const fallbackOrderId = object?.id ? await findOrderIdByProviderPaymentId(object.id) : "";
+    const intentOrderId = object?.payment_intent
+      ? await getPaymentIntentOrderId(object.payment_intent, stripeSecret)
+      : "";
+    const orderId = getOrderId(object) || intentOrderId || fallbackOrderId;
 
-    if (orderId && event.type === "checkout.session.completed") {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "payment_intent.succeeded" ||
+      event.type === "charge.succeeded"
+    ) {
+      if (!orderId) return json({ error: `Missing orderId metadata for ${event.type}` }, 400);
       await updateOrder(orderId, "paid", object?.id);
-      await serviceRpc("fulfill_paid_payment_order", { p_order_id: orderId });
     }
 
-    if (orderId && event.type === "checkout.session.expired") {
+    if (event.type === "checkout.session.expired") {
+      if (!orderId) return json({ error: `Missing orderId metadata for ${event.type}` }, 400);
       await updateOrder(orderId, "canceled", object?.id);
+      return json({ received: true });
     }
 
-    return json({ received: true });
+    return json({ received: true, ignored: event.type });
   }
 
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -204,6 +193,8 @@ Deno.serve(async (request: Request) => {
       cancel_url: `${body.cancelUrl}?orderId=${row.order_id}`,
       "metadata[orderId]": row.order_id,
       "metadata[paymentCode]": row.payment_code,
+      "payment_intent_data[metadata][orderId]": row.order_id,
+      "payment_intent_data[metadata][paymentCode]": row.payment_code,
     }),
   });
   const sessionData = (await session.json()) as { id?: string; url?: string; error?: { message?: string } };
@@ -211,6 +202,8 @@ Deno.serve(async (request: Request) => {
   if (!session.ok || !sessionData.url) {
     return json({ error: sessionData.error?.message ?? "Unable to create Stripe session" }, 400);
   }
+
+  await updateOrder(row.order_id, "pending", sessionData.id);
 
   return json({ orderId: row.order_id, checkoutUrl: sessionData.url });
 });

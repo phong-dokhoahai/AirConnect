@@ -168,7 +168,11 @@ function toNumber(value: number | string | null | undefined) {
   return typeof value === "number" ? value : Number(value);
 }
 
-function formatPrice(value: number | string, currency: string, language: string) {
+function formatPrice(
+  value: number | string,
+  currency: string,
+  language: string,
+) {
   return formatMoney(toNumber(value), currency, language);
 }
 
@@ -272,7 +276,9 @@ export default function PlanDetailRoute() {
     ? formatValidity(plan.validity_days, t("common.days"))
     : "-";
   const networkLabel = plan ? getNetworkLabel(plan) : "-";
-  const priceLabel = plan ? formatPrice(plan.price, plan.currency, language) : "-";
+  const priceLabel = plan
+    ? formatPrice(plan.price, plan.currency, language)
+    : "-";
   const originalPrice = plan ? toNumber(plan.original_price) : 0;
   const originalPriceLabel =
     plan && originalPrice > toNumber(plan.price)
