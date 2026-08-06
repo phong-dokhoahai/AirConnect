@@ -1,7 +1,12 @@
 import { CustomLinearGradient } from "@/components/ui/CustomLinearGradient";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { getPlanDisplay, type PlanDisplayRow } from "@/lib/planDisplay";
+import {
+  formatMoney,
+  getPlanDisplay,
+  toNumber,
+  type PlanDisplayRow,
+} from "@/lib/planDisplay";
 import { getUserOrders } from "@/lib/purchaseQueries";
 import { useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Globe, Package } from "lucide-react-native";
@@ -29,37 +34,41 @@ type OrderRow = {
   currency: string;
   created_at: string;
   esim_plans?: PlanDisplayRow | PlanDisplayRow[] | null;
-  user_esims?: { id: string; status: string; expires_at: string | null }[] | null;
+  user_esims?:
+    | { id: string; status: string; expires_at: string | null }[]
+    | null;
 };
 
 function firstRow<T>(value: T | T[] | null | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function formatMoney(value: number | string, currency: string, language: string) {
-  return new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", {
-    style: "currency",
-    currency,
-  }).format(Number(value));
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function formatDate(value: string, language: string) {
-  return new Date(value).toLocaleDateString(language === "vi" ? "vi" : "en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return new Date(value).toLocaleDateString(
+    language === "vi" ? "vi" : "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
 }
 
 export function TransactionHistoryScreen() {
   const router = useRouter();
-  const { user: authUser, initializing, signingIn, signInWithGoogle } = useAuth();
+  const {
+    user: authUser,
+    initializing,
+    signingIn,
+    signInWithGoogle,
+  } = useAuth();
   const { language, t, translateName } = useI18n();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  console.log("orders:", JSON.stringify(orders, null, 2));
   const loadOrders = useCallback(async () => {
     if (!authUser) return;
 
@@ -67,33 +76,20 @@ export function TransactionHistoryScreen() {
     setHasLoadedOrders(false);
     setError(null);
 
-        try {
-          const { data, error } = await getUserOrders(currentUserId);
+    try {
+      const { data, error } = await getUserOrders(authUser.id);
 
-          if (!isMounted) return;
-
-          if (error) {
-            setError(error.message || t("common.somethingWrong"));
-            setOrders([]);
-            return;
-          }
-
-          setOrders((data ?? []) as unknown as OrderRow[]);
-        } catch (error) {
-          if (!isMounted) return;
-          setError(error instanceof Error ? error.message : t("common.somethingWrong"));
-          setOrders([]);
-        } finally {
-          if (isMounted) {
-            setHasLoadedOrders(true);
-            setIsLoading(false);
-          }
-        }
+      if (error) {
+        setError(error.message || t("common.somethingWrong"));
+        setOrders([]);
+        return;
       }
 
       setOrders((data ?? []) as unknown as OrderRow[]);
     } catch (error) {
-      setError(error instanceof Error ? error.message : t("common.somethingWrong"));
+      setError(
+        error instanceof Error ? error.message : t("common.somethingWrong"),
+      );
       setOrders([]);
     } finally {
       setHasLoadedOrders(true);
@@ -122,8 +118,8 @@ export function TransactionHistoryScreen() {
   }, [authUser]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-1 px-5 pt-3">
+    <SafeAreaView className="flex-1 ">
+      <View className="px-5 pb-10">
         <View className="mb-6 flex-row items-center">
           <Pressable
             accessibilityRole="button"
@@ -177,7 +173,9 @@ export function TransactionHistoryScreen() {
         ) : orders.length === 0 ? (
           <View className="mt-6 rounded-3xl border border-gray-100 bg-white p-5">
             <Text className="text-xl font-bold text-gray-950">
-              {error ? t("common.somethingWrong") : t("transactions.emptyTitle")}
+              {error
+                ? t("common.somethingWrong")
+                : t("transactions.emptyTitle")}
             </Text>
             <Text className="mt-2 text-sm leading-5 text-gray-500">
               {error ?? t("transactions.emptyBody")}
@@ -205,9 +203,7 @@ export function TransactionHistoryScreen() {
               onPress={loadOrders}
               className="mt-5 self-start rounded-2xl bg-[#6915E0] px-5 py-3"
             >
-              <Text className="font-bold text-white">
-                {t("common.retry")}
-              </Text>
+              <Text className="font-bold text-white">{t("common.retry")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -236,7 +232,9 @@ export function TransactionHistoryScreen() {
 
                     <View className="ml-3 flex-1">
                       <Text className="text-base font-bold text-gray-950">
-                        {display ? translateName(display.name) : t("common.packageUnavailable")}
+                        {display
+                          ? translateName(display.name)
+                          : t("common.packageUnavailable")}
                       </Text>
                       <Text className="mt-1 text-xs text-gray-500">
                         {formatDate(order.created_at, language)} · {status}
@@ -244,7 +242,11 @@ export function TransactionHistoryScreen() {
                     </View>
 
                     <Text className="text-base font-bold text-[#6915E0]">
-                      {formatMoney(order.total_amount, order.currency, language)}
+                      {formatMoney(
+                        toNumber(order.total_amount),
+                        order.currency,
+                        language,
+                      )}
                     </Text>
                   </View>
 
@@ -264,9 +266,21 @@ export function TransactionHistoryScreen() {
                     <CreditCard size={14} color="#6B7280" />
                     <Text className="ml-2 text-xs text-gray-500">
                       {t("transactions.breakdown", {
-                        subtotal: formatMoney(order.subtotal_amount, order.currency, language),
-                        tax: formatMoney(order.tax_amount, order.currency, language),
-                        discount: formatMoney(order.discount_amount, order.currency, language),
+                        subtotal: formatMoney(
+                          toNumber(order.subtotal_amount),
+                          order.currency,
+                          language,
+                        ),
+                        tax: formatMoney(
+                          toNumber(order.tax_amount),
+                          order.currency,
+                          language,
+                        ),
+                        discount: formatMoney(
+                          toNumber(order.discount_amount),
+                          order.currency,
+                          language,
+                        ),
                       })}
                     </Text>
                   </View>
