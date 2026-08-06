@@ -64,11 +64,15 @@ export default function HomeRoute() {
     router.push({ pathname: "/plan/[id]", params: { id: planId } });
   };
 
-  const loadCatalog = useCallback(async () => {
+  const loadCatalog = useCallback(async (isMounted = () => true) => {
     setIsCatalogLoading(true);
     setCatalogError(null);
 
     const result = await getCatalogData(language);
+
+    if (!isMounted()) {
+      return;
+    }
 
     if (result.error) {
       setCatalog(emptyCatalog);
@@ -83,32 +87,12 @@ export default function HomeRoute() {
   useEffect(() => {
     let isMounted = true;
 
-    async function load() {
-      setIsCatalogLoading(true);
-      setCatalogError(null);
-
-      const result = await getCatalogData(language);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (result.error) {
-        setCatalog(emptyCatalog);
-        setCatalogError(result.error);
-      } else {
-        setCatalog(result.data ?? emptyCatalog);
-      }
-
-      setIsCatalogLoading(false);
-    }
-
-    load();
+    void loadCatalog(() => isMounted);
 
     return () => {
       isMounted = false;
     };
-  }, [language]);
+  }, [loadCatalog]);
 
   return (
     <View className="flex-1 bg-[#F9FAFB]">

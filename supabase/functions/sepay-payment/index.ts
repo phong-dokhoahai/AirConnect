@@ -92,8 +92,24 @@ async function supabaseRpc<T>(name: string, body: unknown, authorization: string
   return response.ok ? { data, error: null } : { data: null, error: data };
 }
 
+async function serviceRpc<T>(name: string, body: unknown) {
+  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
+      authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await response.json()) as T;
+  if (!response.ok) throw new Error(JSON.stringify(data));
+  return data;
+}
+
 async function markPaid(paymentCode: string) {
-  await fetch(
+  const response = await fetch(
     `${env("SUPABASE_URL")}/rest/v1/orders?payment_provider=eq.sepay&provider_payment_id=eq.${paymentCode}`,
     {
       method: "PATCH",
@@ -101,7 +117,7 @@ async function markPaid(paymentCode: string) {
         apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
         authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
         "content-type": "application/json",
-        prefer: "return=minimal",
+        prefer: "return=representation",
       },
       body: JSON.stringify({
         status: "paid",
@@ -110,6 +126,10 @@ async function markPaid(paymentCode: string) {
       }),
     },
   );
+
+  const rows = (await response.json()) as { id?: string }[];
+  if (!response.ok) throw new Error(JSON.stringify(rows));
+  return rows[0]?.id;
 }
 
 Deno.serve(async (request: Request) => {
@@ -129,7 +149,10 @@ Deno.serve(async (request: Request) => {
     const body = JSON.parse(rawBody) as SepayWebhookBody;
 
     if (body.code && body.transferType === "in" && Number(body.transferAmount) > 0) {
-      await markPaid(body.code);
+      const orderId = await markPaid(body.code);
+      if (orderId) {
+        await serviceRpc("fulfill_paid_payment_order", { p_order_id: orderId });
+      }
     }
 
     return json({ success: true });

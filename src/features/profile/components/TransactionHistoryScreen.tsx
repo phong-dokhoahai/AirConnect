@@ -32,8 +32,6 @@ type OrderRow = {
   user_esims?: { id: string; status: string; expires_at: string | null }[] | null;
 };
 
-const loadTimeoutMs = 3000;
-
 function firstRow<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -75,21 +73,9 @@ export function TransactionHistoryScreen() {
         setError(null);
 
         try {
-          const result = await Promise.race([
-            getUserOrders(currentUserId),
-            new Promise<null>((resolve) =>
-              setTimeout(resolve, loadTimeoutMs, null),
-            ),
-          ]);
+          const { data, error } = await getUserOrders(currentUserId);
 
           if (!isMounted) return;
-
-          if (!result) {
-            setOrders([]);
-            return;
-          }
-
-          const { data, error } = result;
 
           if (error) {
             setError(error.message || t("common.somethingWrong"));

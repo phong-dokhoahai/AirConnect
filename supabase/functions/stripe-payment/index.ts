@@ -85,8 +85,24 @@ async function supabaseRpc<T>(name: string, body: unknown, authorization: string
   return response.ok ? { data, error: null } : { data: null, error: data };
 }
 
+async function serviceRpc<T>(name: string, body: unknown) {
+  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
+      authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await response.json()) as T;
+  if (!response.ok) throw new Error(JSON.stringify(data));
+  return data;
+}
+
 async function updateOrder(orderId: string, status: string, providerPaymentId?: string) {
-  await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
+  const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/orders?id=eq.${orderId}`, {
     method: "PATCH",
     headers: {
       apikey: env("SUPABASE_SERVICE_ROLE_KEY"),
@@ -100,6 +116,8 @@ async function updateOrder(orderId: string, status: string, providerPaymentId?: 
       paid_at: status === "paid" ? new Date().toISOString() : null,
     }),
   });
+
+  if (!response.ok) throw new Error(await response.text());
 }
 
 Deno.serve(async (request: Request) => {
@@ -132,6 +150,7 @@ Deno.serve(async (request: Request) => {
 
     if (orderId && event.type === "checkout.session.completed") {
       await updateOrder(orderId, "paid", object?.id);
+      await serviceRpc("fulfill_paid_payment_order", { p_order_id: orderId });
     }
 
     if (orderId && event.type === "checkout.session.expired") {
