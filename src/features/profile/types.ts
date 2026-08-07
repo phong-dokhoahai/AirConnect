@@ -30,6 +30,7 @@ export type QuickAction = {
   icon: IconComponent;
   labelKey: string;
   subKey: string;
+  sub?: string;
   screen: string;
   from: string;
   to: string;

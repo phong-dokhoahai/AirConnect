@@ -92,7 +92,7 @@ function QuickActionCard({
         {t(item.labelKey)}
       </Text>
 
-      <Text className="text-xs text-gray-500 mt-1">{t(item.subKey)}</Text>
+      <Text className="text-xs text-gray-500 mt-1">{item.sub ?? t(item.subKey)}</Text>
     </>
   );
 

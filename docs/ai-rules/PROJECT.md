@@ -534,6 +534,7 @@ Quick actions:
 * Transaction History opens the signed-in user's Supabase order history and shows an empty state when there are no orders.
 * Saved Destinations opens an in-app empty state with a path back to Explore.
 * Support opens an in-app contact screen with phone, email, and transaction history actions.
+* Profile summary stats and quick-action counts must use signed-in Supabase order/eSIM data, not static placeholder counts.
 
 ---
 

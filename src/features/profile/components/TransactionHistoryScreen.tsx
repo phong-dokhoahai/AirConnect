@@ -8,7 +8,7 @@ import {
   type PlanDisplayRow,
 } from "@/lib/planDisplay";
 import { getUserOrders } from "@/lib/purchaseQueries";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ArrowLeft, CreditCard, Globe, Package } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -68,7 +68,7 @@ export function TransactionHistoryScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  console.log("orders:", JSON.stringify(orders, null, 2));
+
   const loadOrders = useCallback(async () => {
     if (!authUser) return;
 
@@ -97,13 +97,11 @@ export function TransactionHistoryScreen() {
     }
   }, [authUser, t]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  useFocusEffect(
+    useCallback(() => {
       void loadOrders();
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [loadOrders]);
+    }, [loadOrders]),
+  );
 
   useEffect(() => {
     if (authUser) return;

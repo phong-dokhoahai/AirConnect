@@ -31,7 +31,6 @@ yarn-error.*
 *.pem
 
 # local env files
-.env
 .env*.local
 
 # typescript
@@ -49,3 +48,4 @@ _bmad/
 /.github/agents/
 /srcWeb/
 /supabase/.temp
+config.bat

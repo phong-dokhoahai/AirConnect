@@ -14,6 +14,10 @@ import { useProfilePreferences } from "./hooks/useProfilePreferences";
 import { useProfileStats } from "./hooks/useProfileStats";
 import { getProfileUser } from "./utils";
 
+function countLabel(count: string, english: string, vietnamese: string, language: string) {
+  return `${count} ${language === "vi" ? vietnamese : english}`;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const {
@@ -41,6 +45,30 @@ export default function ProfileScreen() {
           ? profileStats.totalDataUsed
           : profileStats.esimsPurchased,
   }));
+  const profileQuickActions = quickActions.map((action) => {
+    if (action.labelKey === "tabs.myEsims") {
+      return {
+        ...action,
+        sub: countLabel(profileStats.activeEsims, "active", "đang hoạt động", language),
+      };
+    }
+
+    if (action.labelKey === "profile.orderHistory") {
+      return {
+        ...action,
+        sub: countLabel(profileStats.ordersCount, "orders", "đơn hàng", language),
+      };
+    }
+
+    if (action.labelKey === "profile.savedDestinations") {
+      return {
+        ...action,
+        sub: countLabel("0", "places", "địa điểm", language),
+      };
+    }
+
+    return action;
+  });
 
   if (initializing) {
     return <LoadingProfile />;
@@ -66,7 +94,7 @@ export default function ProfileScreen() {
           <ProfileHeaderCard profileUser={profileUser} />
           <StatsRow stats={accountStats} />
           <QuickActionsGrid
-            actions={quickActions}
+            actions={profileQuickActions}
             onActionPress={(screen) => router.push(screen as never)}
           />
           {/* <LoyaltyCard

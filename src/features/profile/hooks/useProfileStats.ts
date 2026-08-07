@@ -1,20 +1,26 @@
-import { getUserEsims } from "@/lib/purchaseQueries";
+import { getUserEsims, getUserOrders } from "@/lib/purchaseQueries";
 import { toNumber, type PlanDisplayRow } from "@/lib/planDisplay";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 
 type ProfileStats = {
+  activeEsims: string;
   countriesConnected: string;
+  ordersCount: string;
   totalDataUsed: string;
   esimsPurchased: string;
 };
 
 type UserEsimStatsRow = {
+  status: string;
   data_used_gb: number | string | null;
   esim_plans?: PlanDisplayRow | PlanDisplayRow[] | null;
 };
 
 const emptyStats: ProfileStats = {
+  activeEsims: "0",
   countriesConnected: "0",
+  ordersCount: "0",
   totalDataUsed: "0 GB",
   esimsPurchased: "0",
 };
@@ -37,25 +43,34 @@ function countryKeys(plan: PlanDisplayRow) {
 export function useProfileStats(userId?: string) {
   const [stats, setStats] = useState(emptyStats);
 
-  useEffect(() => {
+  const loadStats = useCallback(() => {
     let isMounted = true;
 
-    if (!userId) return;
+    if (!userId) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const currentUserId = userId;
 
     async function loadStats() {
       try {
-        const { data, error } = await getUserEsims(currentUserId);
+        const [esimsResult, ordersResult] = await Promise.all([
+          getUserEsims(currentUserId),
+          getUserOrders(currentUserId),
+        ]);
 
         if (!isMounted) return;
 
-        if (error) {
-          console.error("Profile stats load failed", error);
+        if (esimsResult.error || ordersResult.error) {
+          console.error("Profile stats load failed", esimsResult.error ?? ordersResult.error);
           setStats(emptyStats);
           return;
         }
 
-        const esims = (data ?? []) as unknown as UserEsimStatsRow[];
+        const esims = (esimsResult.data ?? []) as unknown as UserEsimStatsRow[];
+        const orders = ordersResult.data ?? [];
         const countries = new Set(
           esims.flatMap((esim) => rows(esim.esim_plans).flatMap(countryKeys)),
         );
@@ -65,9 +80,11 @@ export function useProfileStats(userId?: string) {
         );
 
         setStats({
+          activeEsims: String(esims.filter((esim) => esim.status !== "expired").length),
           countriesConnected: String(countries.size),
+          ordersCount: String(orders.length),
           totalDataUsed: formatGb(dataUsed),
-          esimsPurchased: String(esims.length),
+          esimsPurchased: String(orders.filter((order) => order.status === "paid").length),
         });
       } catch (error) {
         if (!isMounted) return;
@@ -82,6 +99,8 @@ export function useProfileStats(userId?: string) {
       isMounted = false;
     };
   }, [userId]);
+
+  useFocusEffect(loadStats);
 
   return userId ? stats : emptyStats;
 }
