@@ -178,12 +178,6 @@ function getLowestPriceForCountry(country: CountryRow, plans: CatalogPlanRow[]) 
   );
 }
 
-function getLowestPriceForRegion(region: RegionRow, plans: CatalogPlanRow[]) {
-  return plans.find((plan) =>
-    getPlanRegions(plan).some((planRegion) => planRegion.id === region.id),
-  );
-}
-
 function mapPopularDestinations(
   countries: CountryRow[],
   plans: CatalogPlanRow[],
@@ -211,27 +205,32 @@ function mapRegionalPlans(
   plans: CatalogPlanRow[],
   language: string,
 ): RegionalPlan[] {
-  return regions.map((region) => {
-    const plan = getLowestPriceForRegion(region, plans);
-    const colors: readonly [string, string] =
-      region.gradient_start && region.gradient_end
-        ? [region.gradient_start, region.gradient_end]
-        : ["#4ADE80", "#14B8A6"];
+  const regionsById = new Map(regions.map((region) => [region.id, region]));
 
-    return {
-      id: region.slug,
-      planId: plan?.id,
-      name: region.name,
-      countries: (region.region_countries ?? []).flatMap((entry) =>
-        rows(entry.countries),
-      ).length,
-      price: plan
-        ? formatPrice(plan.price, plan.currency, language)
-        : "Check plans",
-      icon: region.display_icon ?? "\uD83D\uDDFA\uFE0F",
-      colors,
-    };
-  });
+  return plans.flatMap((plan) =>
+    getPlanRegions(plan).map((planRegion) => {
+      const region = regionsById.get(planRegion.id);
+      const colors: readonly [string, string] =
+        planRegion.gradient_start && planRegion.gradient_end
+          ? [planRegion.gradient_start, planRegion.gradient_end]
+          : ["#4ADE80", "#14B8A6"];
+
+      return {
+        id: `${planRegion.slug}-${plan.id}`,
+        planId: plan.id,
+        name: plan.title || planRegion.name,
+        countries: (region?.region_countries ?? []).flatMap((entry) =>
+          rows(entry.countries),
+        ).length,
+        data: formatData(plan),
+        validity: formatValidity(plan.validity_days),
+        network: getNetworkLabel(plan),
+        price: formatPrice(plan.price, plan.currency, language),
+        icon: planRegion.display_icon ?? "\uD83D\uDDFA\uFE0F",
+        colors,
+      };
+    }),
+  );
 }
 
 function mapFeaturedPlans(
@@ -291,7 +290,7 @@ export async function getCatalogData(
         language,
       ).slice(0, 9),
       regionalPlans: mapRegionalPlans(regions, plans, language),
-      featuredPlans: mapFeaturedPlans(plans, language).slice(0, 6),
+      featuredPlans: mapFeaturedPlans(plans, language),
     },
     error: null,
   };

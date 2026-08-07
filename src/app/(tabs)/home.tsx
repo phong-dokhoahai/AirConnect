@@ -89,6 +89,29 @@ export default function HomeRoute() {
     filteredCatalog.regionalPlans.length +
     filteredCatalog.featuredPlans.length;
   const isSearching = searchQuery.length > 0;
+  const recommendedPlans = useMemo(() => {
+    const plans = new Map<string, FeaturedPlan>();
+
+    filteredCatalog.featuredPlans.forEach((plan) => {
+      plans.set(plan.id, plan);
+    });
+
+    filteredCatalog.regionalPlans.forEach((plan) => {
+      if (!plan.planId || plans.has(plan.planId)) return;
+
+      plans.set(plan.planId, {
+        id: plan.planId,
+        flag: plan.icon,
+        country: plan.name,
+        data: plan.data ?? "",
+        validity: plan.validity ?? "",
+        network: plan.network ?? "",
+        price: plan.price,
+      });
+    });
+
+    return Array.from(plans.values());
+  }, [filteredCatalog.featuredPlans, filteredCatalog.regionalPlans]);
 
   const toggleFavorite = (planId: string) => {
     setFavorites((prev) =>
@@ -102,7 +125,7 @@ export default function HomeRoute() {
     router.push({ pathname: "/plan/[id]", params: { id: planId } });
   };
 
-  const loadCatalog = useCallback(async (isMounted = () => true) => {
+  const loadCatalog = useCallback(async (isMounted: () => boolean = () => true) => {
     setIsCatalogLoading(true);
     setCatalogError(null);
 
@@ -175,7 +198,7 @@ export default function HomeRoute() {
               {catalogError}
             </Text>
 
-            <Pressable className="mt-3 self-start" onPress={loadCatalog}>
+            <Pressable className="mt-3 self-start" onPress={() => void loadCatalog()}>
               <Text className="text-sm font-semibold text-[#7B61FF]">
                 {t("common.retry")}
               </Text>
@@ -203,10 +226,10 @@ export default function HomeRoute() {
             onViewDetails={viewPlanDetails}
           />
         )}
-        {(!isSearching || filteredCatalog.featuredPlans.length > 0) && (
+        {(!isSearching || recommendedPlans.length > 0) && (
           <RecommendedPlansSection
             favorites={favorites}
-            plans={filteredCatalog.featuredPlans}
+            plans={recommendedPlans}
             onToggleFavorite={toggleFavorite}
             onViewDetails={viewPlanDetails}
           />

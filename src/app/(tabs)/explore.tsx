@@ -433,6 +433,14 @@ export default function ExploreRoute() {
                 key={region.id}
                 className="bg-white rounded-2xl p-4 mr-3 border border-[#F3F4F6]"
                 style={{ width: 160 }}
+                disabled={!region.planId}
+                onPress={() =>
+                  region.planId &&
+                  router.push({
+                    pathname: "/plan/[id]",
+                    params: { id: region.planId },
+                  })
+                }
               >
                 <CustomLinearGradient
                   colors={region.colors}
@@ -453,11 +461,11 @@ export default function ExploreRoute() {
                 </Text>
 
                 <Text className="text-xs text-[#6B7280] mb-2">
-                  {t("home.countriesCount", { count: region.countries })}
+                  {region.data} - {region.validity} - {region.network}
                 </Text>
 
                 <Text className="text-sm font-medium text-[#7B61FF]">
-                  {t("common.from", { value: region.price })}
+                  {region.price}
                 </Text>
               </Pressable>
             ))}

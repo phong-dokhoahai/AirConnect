@@ -12,6 +12,9 @@ export type RegionalPlan = {
   planId?: string;
   name: string;
   countries: number;
+  data?: string;
+  validity?: string;
+  network?: string;
   price: string;
   icon: string;
   colors: readonly [string, string];

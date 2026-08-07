@@ -46,11 +46,13 @@ export function RegionalPlansSection({
             </Text>
 
             <Text className="text-xs text-[#6B7280] mt-1">
-              {t("home.countriesCount", { count: item.countries })}
+              {item.data && item.validity && item.network
+                ? `${item.data} - ${item.validity} - ${item.network}`
+                : t("home.countriesCount", { count: item.countries })}
             </Text>
 
             <Text className="text-[#7B61FF] mt-2 font-medium">
-              {t("common.from", { value: item.price })}
+              {item.price}
             </Text>
           </Pressable>
         ))}
